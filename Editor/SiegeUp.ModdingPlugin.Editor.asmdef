@@ -1,0 +1,17 @@
+{
+    "name": "SiegeUp.ModdingPlugin.Editor",
+    "references": [
+        "GUID:32827756500549348915dfee0343eae2"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
