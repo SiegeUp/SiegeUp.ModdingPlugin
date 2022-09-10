@@ -132,6 +132,16 @@ namespace SiegeUp.ModdingPlugin
 			return JsonUtility.FromJson<SiegeUpModMeta>(File.ReadAllText(path));
 		}
 
+		public static string GetModNameFromPathFast(string path)
+		{
+			path = FixPathSeparator(path);
+			int nameStartIndex = path.LastIndexOf(Path.DirectorySeparatorChar) + 1;
+			int nameLength = path.LastIndexOf('_') - nameStartIndex;
+			if (nameLength < 0)
+				nameLength = path.Length - nameStartIndex;
+			return path.Substring(nameStartIndex, nameLength);
+		}
+
 		private static string FindModFolder(string modName)
 		{
 			modName = modName.ToLower();
@@ -145,16 +155,6 @@ namespace SiegeUp.ModdingPlugin
 				return modsFolders[0];
 			Debug.LogWarning("Multiple mods with similar names. Selected first mod");
 			return modsFolders[0]; //TODO do smth if there are multiple mods with similar names when searching for mod folder
-		}
-
-		public static string GetModNameFromPathFast(string path)
-		{
-			path = FixPathSeparator(path);
-			int nameStartIndex = path.LastIndexOf(Path.DirectorySeparatorChar) + 1;
-			int nameLength = path.LastIndexOf('_') - nameStartIndex;
-			if (nameLength < 0)
-				nameLength = path.Length - nameStartIndex;
-			return path.Substring(nameStartIndex, nameLength);
 		}
 	}
 }

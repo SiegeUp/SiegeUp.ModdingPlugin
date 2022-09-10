@@ -28,11 +28,6 @@ namespace SiegeUp.ModdingPlugin
 			return result;
 		}
 
-		private void RemoveNullRecords()
-		{
-			ObjectRecords = ObjectRecords.Where(x => x != null && x.Prefab).ToList();
-		}
-
 		public void UpdateBuildInfo(PlatformShortName platform)
 		{
 			UpdateBuildInfo(platform, new SiegeUpModBundleInfo(platform, ModsLoader.Version, "1.1.102r19"));
@@ -47,6 +42,11 @@ namespace SiegeUp.ModdingPlugin
 #if UNITY_EDITOR
 			EditorUtility.SetDirty(this);
 #endif
+		}
+
+		private void RemoveNullRecords()
+		{
+			ObjectRecords = ObjectRecords.Where(x => x != null && x.Prefab).ToList();
 		}
 
 		[System.Serializable]

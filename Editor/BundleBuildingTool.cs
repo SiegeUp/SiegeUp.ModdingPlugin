@@ -51,21 +51,17 @@ namespace SiegeUp.ModdingPlugin
 			modBase.UpdateBuildInfo(SupportedPlatforms[targetPlatform], prevBuildInfo);
 		}
 
-		static void RegeneratePrefabIds(SiegeUpModBase modBase)
+		private static void RegeneratePrefabIds(SiegeUpModBase modBase)
 		{
 			const string prefabRefName = "PrefabRef";
 			var allObjects = modBase.GetAllObjects();
-			var modObjPaths = allObjects.Select(x => AssetDatabase.GetAssetPath(x)).ToArray();
-			var deps = allObjects
+			var objectsWithDeps = allObjects
 				.SelectMany(x => AssetDatabase.GetDependencies(AssetDatabase.GetAssetPath(x)))
 				.Distinct()
 				.Where(x => x.EndsWith(".prefab"))
-				.Except(modObjPaths)
 				.Select(x => (GameObject)AssetDatabase.LoadAssetAtPath(x, typeof(GameObject)))
-				.Where(x => x != null)
-				.ToList();
-			allObjects.AddRange(deps);
-			foreach (var obj in allObjects)
+				.Where(x => x != null);
+			foreach (var obj in objectsWithDeps)
 			{
 				var prefabRef = obj.GetComponent(prefabRefName);
 				if (!prefabRef)

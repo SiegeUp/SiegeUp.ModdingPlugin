@@ -1,25 +1,28 @@
 ﻿using UnityEditor;
 using UnityEngine;
 
-[CustomPropertyDrawer(typeof(SiegeUp.ModdingPlugin.SiegeUpModBase.ObjectRecord))]
-public class SiegeUpObjectDrawer : PropertyDrawer
+namespace SiegeUp.ModdingPlugin
 {
-	public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
+	[CustomPropertyDrawer(typeof(SiegeUpModBase.ObjectRecord))]
+	public class SiegeUpObjectDrawer : PropertyDrawer
 	{
-		return EditorGUI.GetPropertyHeight(property, label, property.isExpanded);
-	}
-
-	public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
-	{
-		try
+		public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
 		{
-			var prefabRefProp = property.FindPropertyRelative("Prefab");
-			var prefabRef = prefabRefProp.objectReferenceValue as GameObject;
-			label.text = prefabRef.gameObject.name;
+			return EditorGUI.GetPropertyHeight(property, label, property.isExpanded);
 		}
-		catch (System.NullReferenceException) { }
-		catch (System.InvalidCastException) { }
 
-		EditorGUI.PropertyField(position, property, label, property.isExpanded);
+		public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
+		{
+			try
+			{
+				var prefabRefProp = property.FindPropertyRelative("Prefab");
+				var prefabRef = prefabRefProp.objectReferenceValue as GameObject;
+				label.text = prefabRef.gameObject.name;
+			}
+			catch (System.NullReferenceException) { }
+			catch (System.InvalidCastException) { }
+
+			EditorGUI.PropertyField(position, property, label, property.isExpanded);
+		}
 	}
 }
