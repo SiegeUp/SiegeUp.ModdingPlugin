@@ -37,17 +37,17 @@ namespace SiegeUp.ModdingPlugin
 				BuildAssetBundle(modBase, map, platform, modDirectory);
 				FileUtils.CreateModMetaFile(modDirectory, modBase.ModInfo);
 			}
-			CreateModPackage(modBase);
+			CreateModPackage(modBase, modDirectory);
 			AssetDatabase.Refresh();
 		}
 
-		private static void CreateModPackage(SiegeUpModBase modBase)
+		public static void CreateModPackage(SiegeUpModBase modBase, string outputFolder)
 		{
 			var files = modBase.GetAllObjects();
-			var modFolder = FileUtils.GetExpectedModFolder(modBase.ModInfo);
-			var path = Path.Combine(modFolder, modBase.ModInfo.ModName + ".unitypackage");
+			var path = Path.Combine(outputFolder, modBase.ModInfo.ModName + ".unitypackage");
 			AssetDatabase.ExportPackage(files.Select(x => AssetDatabase.GetAssetPath(x)).ToArray(), path);
-			FileUtils.CreatePackageMetaFile(modFolder, modBase.ModInfo);
+			FileUtils.CreatePackageMetaFile(modBase.ModInfo, outputFolder);
+			Debug.Log($"\"{modBase.ModInfo.ModName}\" mod package was successfully saved at {outputFolder}");
 		}
 
 		private static void BuildAssetBundle(SiegeUpModBase modBase, AssetBundleBuild[] map, BuildTarget targetPlatform, string outputDir)

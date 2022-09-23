@@ -162,7 +162,7 @@ namespace SiegeUp.ModdingPlugin
 			return modsFolders[0]; //TODO do smth if there are multiple mods with similar names when searching for mod folder
 		}
 
-		public static void CreatePackageMetaFile(string modFolder, SiegeUpModMeta modInfo)
+		public static void CreatePackageMetaFile(SiegeUpModMeta modInfo, string modFolder)
 		{
 			var info = modInfo.GetShortInfo();
 			File.WriteAllText(Path.Combine(modFolder, PackageMetaFileName), JsonUtility.ToJson(info, true));
