@@ -63,6 +63,11 @@ namespace SiegeUp.ModdingPlugin
 			buildInfo = BuildsInfo.FirstOrDefault(x => x.Platform == platform);
 			return buildInfo != null;
 		}
+
+		public SiegeUpModShortInfo GetShortInfo()
+		{
+			return new SiegeUpModShortInfo(ModName, Version, Id);
+		}
 	}
 
 	[Serializable]
@@ -77,6 +82,20 @@ namespace SiegeUp.ModdingPlugin
 			Platform = platform;
 			PluginVersion = pluginVersion;
 			GameVersion = gameVersion;
+		}
+	}
+
+	public class SiegeUpModShortInfo
+	{
+		public string Name;
+		public int Version;
+		public string Id;
+
+		public SiegeUpModShortInfo(string name, int version, string id)
+		{
+			Name = name;
+			Version = version;
+			Id = id;
 		}
 	}
 }

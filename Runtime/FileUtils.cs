@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using UnityEngine;
 
 namespace SiegeUp.ModdingPlugin
@@ -10,7 +11,11 @@ namespace SiegeUp.ModdingPlugin
 	{
 		public const string ModsFolderName = "mods";
 		public const string MetaFileName = "meta.json";
-		public const string PackagesManifestPath = @"Packages\manifest.json";
+		public const string PackageMetaFileName = "package.json";
+#if UNITY_EDITOR
+		public static string TempFolder = Path.Combine(Assembly.GetExecutingAssembly().Location, "..", "..", "..", "Temp");
+		
+#endif
 
 		public static string GetDefaultGameFolder()
 		{
@@ -155,6 +160,12 @@ namespace SiegeUp.ModdingPlugin
 				return modsFolders[0];
 			Debug.LogWarning("Multiple mods with similar names. Selected first mod");
 			return modsFolders[0]; //TODO do smth if there are multiple mods with similar names when searching for mod folder
+		}
+
+		public static void CreatePackageMetaFile(string modFolder, SiegeUpModMeta modInfo)
+		{
+			var info = modInfo.GetShortInfo();
+			File.WriteAllText(Path.Combine(modFolder, PackageMetaFileName), JsonUtility.ToJson(info, true));
 		}
 	}
 }

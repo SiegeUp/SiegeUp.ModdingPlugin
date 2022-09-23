@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
@@ -35,7 +37,17 @@ namespace SiegeUp.ModdingPlugin
 				BuildAssetBundle(modBase, map, platform, modDirectory);
 				FileUtils.CreateModMetaFile(modDirectory, modBase.ModInfo);
 			}
+			CreateModPackage(modBase);
 			AssetDatabase.Refresh();
+		}
+
+		private static void CreateModPackage(SiegeUpModBase modBase)
+		{
+			var files = modBase.GetAllObjects();
+			var modFolder = FileUtils.GetExpectedModFolder(modBase.ModInfo);
+			var path = Path.Combine(modFolder, modBase.ModInfo.ModName + ".unitypackage");
+			AssetDatabase.ExportPackage(files.Select(x => AssetDatabase.GetAssetPath(x)).ToArray(), path);
+			FileUtils.CreatePackageMetaFile(modFolder, modBase.ModInfo);
 		}
 
 		private static void BuildAssetBundle(SiegeUpModBase modBase, AssetBundleBuild[] map, BuildTarget targetPlatform, string outputDir)
