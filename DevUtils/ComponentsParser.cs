@@ -8,16 +8,16 @@ using UnityEngine;
 
 namespace SiegeUp.ModdingPlugin.DevUtils
 {
-	public class ComponentsParser
+	public class ClassesParser
 	{
 		public Type[] AllowedCustomAttributes { get; private set; }
 
-		public ComponentsParser()
+		public ClassesParser()
 		{
 			AllowedCustomAttributes = new[] { typeof(SerializeField) };
 		}
 
-		public ComponentsParser SetAllowedCustomAttributes(params Type[] allowedCustomAttributes)
+		public ClassesParser SetAllowedCustomAttributes(params Type[] allowedCustomAttributes)
 		{
 			AllowedCustomAttributes = allowedCustomAttributes ?? Array.Empty<Type>();
 			if (!AllowedCustomAttributes.Contains(typeof(SerializeField)))
