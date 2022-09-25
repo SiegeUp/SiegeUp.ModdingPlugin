@@ -4,74 +4,44 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
-using UnityEditor;
-using UnityEditor.Callbacks;
 using UnityEngine;
 
 namespace SiegeUp.ModdingPlugin.DevUtils
 {
-	[CreateAssetMenu]
-	public class ComponentsParser : ScriptableObject
+	public class ComponentsParser
 	{
-		public static ComponentsParser Instance;
+		public Type[] AllowedCustomAttributes;
+		private static readonly Type ComponentIdAttrType = Type.GetType("ComponentId, Assembly-CSharp");
 
-		private const string TempFolder = "temp_components";
-		private static Type ComponentIdAttrType = Type.GetType("ComponentId, Assembly-CSharp");
-		private static string ProjectDir;
-		private static string OutDir;
-
-		//todo usings serialization can be removed if type.FullName will be used everywhere
-		//todo save default variables values
-		[PostProcessBuildAttribute]
-		public static void OnPostprocessBuild(BuildTarget target, string pathToBuiltProject)
-		{
-			Debug.Log(pathToBuiltProject);
-			string[] assets = AssetDatabase.FindAssets($"t:{nameof(ComponentsParser)}");
-			if (assets.Length > 0)
-			{
-				string path = AssetDatabase.GUIDToAssetPath(assets[0]);
-				Instance = AssetDatabase.LoadAssetAtPath<ComponentsParser>(path);
-			}
-			else
-			{
-				Debug.LogError("No ComponentsParser instance found. Create instance if you want to parse components");
-				return;
-			}
-			Instance.Parse(pathToBuiltProject);
-		}
-
-		public void Parse(string buildPath)
+		public void Parse(string outputFolder, Type[] allowedCustomAttributes = null)
 		{
 			Assembly mainAssembly = null;
 			foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
 				if (assembly.GetName().Name == "Assembly-CSharp")
 					mainAssembly = assembly;
 			var types = mainAssembly.GetTypes().Where(x => x.GetCustomAttributes(ComponentIdAttrType, false).Length > 0).ToArray();
-			Parse(buildPath, types);
+			Parse(outputFolder, types, allowedCustomAttributes);
 		}
 
-		public void Parse(string buildPath, params Type[] types)
+		public void Parse(string outputFolder, Type[] types, Type[] allowedCustomAttributes = null)
 		{
-			//ProjectDir = Path.Combine(Assembly.GetExecutingAssembly().Location, "..", "..", "..");
-			if (File.Exists(buildPath))
-				buildPath = Path.GetDirectoryName(buildPath);
-			OutDir = Path.Combine(buildPath, "Scripts");
-			Directory.CreateDirectory(OutDir);
-			
+			AllowedCustomAttributes = allowedCustomAttributes ?? Array.Empty<Type>();
+			if (!AllowedCustomAttributes.Contains(typeof(SerializeField)))
+				AllowedCustomAttributes = AllowedCustomAttributes.Append(typeof(SerializeField)).ToArray();
+			if (File.Exists(outputFolder))
+				outputFolder = Path.GetDirectoryName(outputFolder);
+			Directory.CreateDirectory(outputFolder);
+
 			GC.Collect();
 			var mem = GC.GetTotalMemory(true);
 			var dt = DateTime.Now;
-			
+
 			var classesInfo = GetClassesInfo(types);
 			Debug.Log($"parsing time: {(DateTime.Now - dt).TotalMilliseconds} mem: {(GC.GetTotalMemory(false) - mem) / 8f / 1024f}KB");
-			Parallel.ForEach(classesInfo, (data) =>
-			{
-				using (StreamWriter sw = new StreamWriter(Path.Combine(OutDir, data.Type + ".cs")))
-					ClassSerializer.SerializeClassInfo(sw, data);
-			});
+			Parallel.ForEach(classesInfo, (data) => ClassSerializer.SerializeClass(outputFolder, data));
 			Debug.Log($"serialization ({classesInfo.Count}) time: {(DateTime.Now - dt).TotalMilliseconds} mem: {(GC.GetTotalMemory(false) - mem) / 8f / 1024f}KB");
-			Debug.Log($"Scripts parsing completed with a result of 'Succeeded' in {(DateTime.Now - dt).TotalMilliseconds}ms. Created {classesInfo.Count} files");
-			//Directory.Delete(OutDir, true);
+
+			Debug.Log($"Scripts parsing was completed in {(DateTime.Now - dt).TotalMilliseconds}ms. Created {classesInfo.Count} files");
 		}
 
 		private HashSet<ClassInfo> GetClassesInfo(Type[] types)
@@ -84,7 +54,7 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 				var type = stack.Pop();
 				if (IsSystemType(type) || !IsSimpleType(type))
 					continue;
-				var classInfo = new ClassInfo(type, types.Contains(type));
+				var classInfo = new ClassInfo(type, AllowedCustomAttributes, types.Contains(type));
 				foreach (var a in classInfo.Dependencies.Except(knownTypes))
 					stack.Push(a);
 				knownTypes.UnionWith(classInfo.Dependencies);
@@ -106,46 +76,63 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 
 		private class ClassInfo
 		{
+			public string[] Usings;
 			public Type Type;
-			public Type BaseType;
-			public ClassInfo[] NestedTypes;
-			public bool HasSerializableAttribute;
-			public CustomAttributeData[] CustomAttributes;
-			public MemberInfo[] Variables;
 			public Type[] Dependencies;
 			public bool ShouldBePartial;
-			public IEnumerable<string> Usings => Dependencies.Select(x => x.Namespace).Where(x => !string.IsNullOrEmpty(x)).Distinct();
+			public bool IsSerializable;
+			public CustomAttributeData[] CustomAttributesData;
+			public ClassFieldInfo[] Fields;
+			public ClassInfo[] NestedTypes;
 
-			private static readonly BindingFlags FieldBindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static;
+			private static readonly BindingFlags CommonBindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static;
 
-			public ClassInfo(Type type, bool shouldBePartial)
+			public ClassInfo(Type type, Type[] allowedCustomAttributes, bool shouldBePartial)
 			{
 				ShouldBePartial = shouldBePartial;
 				Type = type;
-				NestedTypes = Type.GetNestedTypes().Where(IsImportantNestedType).Select(x => new ClassInfo(x, false)).ToArray();
-				HasSerializableAttribute = (type.Attributes & TypeAttributes.Serializable) == TypeAttributes.Serializable;
-				CustomAttributes = type.GetCustomAttributesData().Where(x => x.AttributeType.Namespace != null).ToArray();
-				var fields = type.GetFields(FieldBindingFlags).Where(IsImportantField);
+				Fields = GetTypeOwnFields(type, allowedCustomAttributes);
+				var fieldsDirectDeps = GetVisibleDependencies(Fields.Select(x => x.Type)).ToArray();
+				var baseNestedTypesNames = Type.BaseType.GetNestedTypes(CommonBindingFlags).Select(x => x.Name).ToArray();
+				NestedTypes = Type
+					.GetNestedTypes(CommonBindingFlags)
+					.Where(x => IsRequiredNestedType(x, fieldsDirectDeps, allowedCustomAttributes))
+					.Select(x => new ClassInfo(x, allowedCustomAttributes, false))
+					.ToArray();
+				IsSerializable = (type.Attributes & TypeAttributes.Serializable) == TypeAttributes.Serializable;
+				CustomAttributesData = GetCustomAttributesData(type, allowedCustomAttributes);
+
 				var deps = new List<Type>();
 				deps.AddRange(NestedTypes.SelectMany(x => x.Dependencies));
-				if (IsRequiredBaseType(type.BaseType))
+				deps.Add(type.BaseType);
+				deps.AddRange(Fields.Select(x => x.Type));
+				deps.AddRange(CustomAttributesData.Select(x => x.AttributeType));
+				deps.AddRange(Fields.SelectMany(x => x.CustomAttributesData.Select(cad => cad.AttributeType)));
+				try
 				{
-					BaseType = type.BaseType;
-					deps.Add(BaseType);
+					Dependencies = GetVisibleDependencies(deps).Select(GetMainClassType).Distinct().ToArray();
+					Usings = Dependencies.Select(x => x.Namespace).Where(x => !string.IsNullOrEmpty(x)).Distinct().ToArray();
 				}
-				var baseTypeFieldNames = BaseType?.GetFields().Select(field => field.Name).ToArray() ?? Array.Empty<string>();
-				Variables = fields.Where(x => !baseTypeFieldNames.Contains(x.Name)).ToArray();
-				deps.AddRange(fields.Select(x => x.FieldType));
-				deps.AddRange(CustomAttributes.Select(x => x.AttributeType));
-				Dependencies = GetVisibleDependencies(deps).Select(GetMainClassType).Distinct().ToArray();
+				catch
+				{
+
+				}
 			}
 
-			private Type GetMainClassType(Type type)
+			private static CustomAttributeData[] GetCustomAttributesData(MemberInfo member, Type[] allowedCustomAttributes)
+			{
+				return member
+					.GetCustomAttributesData()
+					.Where(x => x.AttributeType.Namespace?.StartsWith("Unity") ?? false || allowedCustomAttributes.Contains(x.AttributeType))
+					.ToArray();
+			}
+
+			private static Type GetMainClassType(Type type)
 			{
 				return type.IsNested ? Type.GetType(type.FullName.Substring(0, type.FullName.IndexOf("+")) + ", " + type.Assembly) : type;
 			}
 
-			private IEnumerable<Type> GetVisibleDependencies(IEnumerable<Type> types)
+			private static IEnumerable<Type> GetVisibleDependencies(IEnumerable<Type> types)
 			{
 				var knownTypes = new HashSet<Type>(types);
 				var stack = new Stack<Type>(knownTypes);
@@ -161,39 +148,80 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 					knownTypes.UnionWith(args);
 				}
 			}
-			private bool IsImportantField(FieldInfo member)
+
+			private static ClassFieldInfo[] GetTypeOwnFields(Type type, Type[] allowedCustomAttributes)
 			{
-				var customAttributes = member.GetCustomAttributesData();
-				return member.FieldType.BaseType != typeof(MulticastDelegate)
-					//&& customAttributes.All(x => x.AttributeType != typeof(HideInInspector))
-					&& (member.IsPublic || customAttributes.Any(x => x.AttributeType == typeof(SerializeField)));
+				var baseTypeFieldNames = type.BaseType?.GetFields().Select(field => field.Name).ToArray() ?? Array.Empty<string>();
+				return type
+					.GetFields(CommonBindingFlags)
+					.Where(x => !baseTypeFieldNames.Contains(x.Name))
+					.Select(x => new ClassFieldInfo(x, allowedCustomAttributes))
+					.Where(IsRequiredField)
+					.ToArray();
 			}
 
-			private bool IsImportantNestedType(Type type)
+			private static bool IsRequiredField(ClassFieldInfo member)
 			{
-				return type.BaseType != typeof(MulticastDelegate) && !type.Name.StartsWith("Legacy_");
+				var customAttributes = member.CustomAttributesData;
+				return member.Type.BaseType != typeof(MulticastDelegate) && (member.IsPublic || customAttributes.Length > 0);
 			}
 
-			private bool IsRequiredBaseType(Type type)
+			private static bool IsRequiredNestedType(Type type, Type[] requiredTypes, Type[] allowedCustomAttributes)
 			{
-				return type != typeof(object) && type != typeof(ValueType) && type != typeof(Enum);
+				var customAttributes = type.GetCustomAttributesData();
+				return requiredTypes.Contains(type)
+					|| (type.IsVisible || customAttributes.Any(x => allowedCustomAttributes.Contains(x.AttributeType)))
+					&& type.BaseType != typeof(MulticastDelegate)
+					&& !type.Name.StartsWith("Legacy_");
+			}
+
+			public class ClassFieldInfo
+			{
+				public Type Type;
+				public bool IsPublic;
+				public string Name;
+				public CustomAttributeData[] CustomAttributesData;
+				private readonly FieldInfo FieldInfo;
+
+				public ClassFieldInfo(FieldInfo field, Type[] allowedCustomAttributes)
+				{
+					Type = field.FieldType;
+					IsPublic = field.IsPublic;
+					Name = field.Name;
+					FieldInfo = field;
+					CustomAttributesData = GetCustomAttributesData(field, allowedCustomAttributes);
+				}
+
+				public static implicit operator FieldInfo(ClassFieldInfo fieldInfo) => fieldInfo.FieldInfo;
 			}
 		}
 
 		private static class ClassSerializer
 		{
-			//todo copy whole attributes file
-			//todo fix abstract classes serialzation
-			public static void SerializeClassInfo(StreamWriter output, ClassInfo classInfo, string indent = "")
+			public static void SerializeClass(string outputFolder, ClassInfo classInfo)
 			{
-				if (!classInfo.Type.IsNested)
+				using (StreamWriter sw = new StreamWriter(Path.Combine(outputFolder, classInfo.Type + ".cs")))
+					SerializeClassInfo(sw, classInfo);
+			}
+
+			//todo^ serialize all class attributes
+			private static void SerializeClassInfo(StreamWriter output, ClassInfo classInfo, string indent = "")
+			{
+				if (classInfo.Type.BaseType == typeof(Attribute))
+				{
+					CopyAttributeFile(output, classInfo.Type);
+					return;
+				}
+				if (!classInfo.Type.IsNested && classInfo.Usings.Length > 0)
 				{
 					SerializeClassUsings(output, classInfo.Usings);
 					output.WriteLine();
 				}
-				SerializeAttributes(output, classInfo.CustomAttributes, indent);
-				if (classInfo.HasSerializableAttribute)
+				SerializeAttributes(output, classInfo.CustomAttributesData, indent);
+				if (classInfo.IsSerializable)
+				{
 					SerializeAttribute(output, typeof(SerializableAttribute), null, indent);
+				}
 				SerializeTypeDeclaration(output, classInfo, indent);
 				output.WriteLine(indent + "{");
 				if (classInfo.Type.IsEnum)
@@ -202,7 +230,7 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 				}
 				else if (!classInfo.Type.IsInterface)
 				{
-					SerializeClassMembers(output, classInfo.Variables, indent + "\t");
+					SerializeFields(output, classInfo.Fields, indent + "\t");
 					foreach (var nestedType in classInfo.NestedTypes)
 					{
 						output.WriteLine();
@@ -211,6 +239,14 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 				}
 				output.Write(indent);
 				output.WriteLine("}");
+			}
+
+			private static void CopyAttributeFile(StreamWriter output, Type type)
+			{
+				var projectDir = Path.Combine(Assembly.GetExecutingAssembly().Location, "..", "..", "..");
+				var files = Directory.GetFiles(projectDir, $"{type.Name}*.cs", SearchOption.AllDirectories);
+				using (StreamReader sr = new StreamReader(files.First()))
+					output.Write(sr.ReadToEnd());
 			}
 
 			private static void SerializeEnumBody(StreamWriter output, ClassInfo classInfo, string indent)
@@ -236,45 +272,33 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 				else
 					output.Write(classInfo.ShouldBePartial ? " partial class " : " class ");
 				output.Write(SerializeMemberType(classInfo.Type, true));
-				if (classInfo.BaseType != null)
-					output.Write($" : {classInfo.BaseType}");
+				if (IsRequiredBaseType(classInfo.Type.BaseType))
+					output.Write($" : {classInfo.Type.BaseType}");
 				output.WriteLine();
 			}
 
-			private static void SerializeClassMembers(StreamWriter output, MemberInfo[] members, string indent = "\t")
+			private static void SerializeFields(StreamWriter output, ClassInfo.ClassFieldInfo[] members, string indent = "\t")
 			{
 				foreach (var member in members)
 				{
-					SerializeClassMember(output, member, indent);
+					SerializeField(output, member, indent);
 					output.WriteLine();
 				}
 			}
 
-			private static void SerializeClassMember(StreamWriter output, MemberInfo member, string indent = "\t")
+			private static void SerializeField(StreamWriter output, ClassInfo.ClassFieldInfo member, string indent = "\t")
 			{
-				Type type;
-				var serializeAttr = member.GetCustomAttribute<SerializeField>();
-				if (serializeAttr != null)
-					SerializeAttribute(output, serializeAttr.GetType(), null, indent);
+				//var serializeAttr = member.GetCustomAttribute<SerializeField>();
+				//if (serializeAttr != null)
+				//	SerializeAttribute(output, serializeAttr.GetType(), null, indent);
+				SerializeAttributes(output, member.CustomAttributesData, indent);
 				output.Write(indent);
 				output.Write(SerializeModifiersAndKeyWords(member));
-
-				string additionalMemberData;
-				if (member is FieldInfo field)
-				{
-					type = field.FieldType;
-					additionalMemberData = ";";
-				}
-				else
-				{
-					throw new NotImplementedException("Unsupported class member type");
-				}
-
 				output.Write(" ");
-				output.Write(SerializeMemberType(type));
+				output.Write(SerializeMemberType(member.Type));
 				output.Write(" ");
 				output.Write(member.Name);
-				output.Write(additionalMemberData);
+				output.Write(";");
 			}
 
 			private static string SerializeMemberType(Type type, bool usePureName = false)
@@ -296,10 +320,10 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 						return type.Name;
 					var typeParts = new[]
 					{
-					type.Namespace?.StartsWith("Unity") ?? false ? type.Namespace : "",
-					type.DeclaringType?.Name ?? "",
-					type.Name
-				}.Where(x => x != "");
+						type.Namespace?.StartsWith("Unity") ?? false ? type.Namespace : "",
+						type.DeclaringType?.Name ?? "",
+						type.Name
+					}.Where(x => x != "");
 					return string.Join(".", typeParts);
 				}
 			}
@@ -320,7 +344,8 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 
 			private static void SerializeClassUsings(StreamWriter output, IEnumerable<string> namespaces)
 			{
-				output.WriteLine(string.Join("\n", namespaces.Select(x => $"using {x};"))); //todo check prefomance
+				foreach (var ns in namespaces)
+					output.WriteLine($"using {ns};");
 			}
 
 			private static string SerializeModifiersAndKeyWords(MemberInfo member)
@@ -352,6 +377,11 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 					" ",
 					new[] { isPublic ? "public" : "", isStatic ? "static" : "", isVirtual ? "virtual" : "", isAbstract ? "abstract" : "" }
 						.Where(x => x != ""));
+			}
+
+			private static bool IsRequiredBaseType(Type type)
+			{
+				return type != typeof(object) && type != typeof(ValueType) && type != typeof(Enum);
 			}
 		}
 	}
