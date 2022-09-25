@@ -10,38 +10,41 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 {
 	public class ComponentsParser
 	{
-		public Type[] AllowedCustomAttributes;
-		private static readonly Type ComponentIdAttrType = Type.GetType("ComponentId, Assembly-CSharp");
+		public Type[] AllowedCustomAttributes { get; private set; }
 
-		public void Parse(string outputFolder, Type[] allowedCustomAttributes = null)
+		public ComponentsParser()
+		{
+			AllowedCustomAttributes = new[] { typeof(SerializeField) };
+		}
+
+		public ComponentsParser SetAllowedCustomAttributes(params Type[] allowedCustomAttributes)
+		{
+			AllowedCustomAttributes = allowedCustomAttributes ?? Array.Empty<Type>();
+			if (!AllowedCustomAttributes.Contains(typeof(SerializeField)))
+				AllowedCustomAttributes = AllowedCustomAttributes.Append(typeof(SerializeField)).ToArray();
+			return this;
+		}
+
+		public void Parse(string outputFolder, Type filterAttributeType)
 		{
 			Assembly mainAssembly = null;
 			foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
 				if (assembly.GetName().Name == "Assembly-CSharp")
 					mainAssembly = assembly;
-			var types = mainAssembly.GetTypes().Where(x => x.GetCustomAttributes(ComponentIdAttrType, false).Length > 0).ToArray();
-			Parse(outputFolder, types, allowedCustomAttributes);
+			var types = mainAssembly.GetTypes().Where(x => x.GetCustomAttributes(filterAttributeType, false).Length > 0).ToArray();
+			Parse(outputFolder, types);
 		}
 
-		public void Parse(string outputFolder, Type[] types, Type[] allowedCustomAttributes = null)
+		public void Parse(string outputFolder, Type[] types)
 		{
-			AllowedCustomAttributes = allowedCustomAttributes ?? Array.Empty<Type>();
-			if (!AllowedCustomAttributes.Contains(typeof(SerializeField)))
-				AllowedCustomAttributes = AllowedCustomAttributes.Append(typeof(SerializeField)).ToArray();
+			
 			if (File.Exists(outputFolder))
 				outputFolder = Path.GetDirectoryName(outputFolder);
 			Directory.CreateDirectory(outputFolder);
-
-			GC.Collect();
-			var mem = GC.GetTotalMemory(true);
-			var dt = DateTime.Now;
-
+			var time = DateTime.Now;
 			var classesInfo = GetClassesInfo(types);
-			Debug.Log($"parsing time: {(DateTime.Now - dt).TotalMilliseconds} mem: {(GC.GetTotalMemory(false) - mem) / 8f / 1024f}KB");
 			Parallel.ForEach(classesInfo, (data) => ClassSerializer.SerializeClass(outputFolder, data));
-			Debug.Log($"serialization ({classesInfo.Count}) time: {(DateTime.Now - dt).TotalMilliseconds} mem: {(GC.GetTotalMemory(false) - mem) / 8f / 1024f}KB");
-
-			Debug.Log($"Scripts parsing was completed in {(DateTime.Now - dt).TotalMilliseconds}ms. Created {classesInfo.Count} files");
+			Debug.Log($"Scripts parsing was completed in {(DateTime.Now - time).TotalMilliseconds}ms. Created {classesInfo.Count} files");
 		}
 
 		private HashSet<ClassInfo> GetClassesInfo(Type[] types)
@@ -93,30 +96,26 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 				Type = type;
 				Fields = GetTypeOwnFields(type, allowedCustomAttributes);
 				var fieldsDirectDeps = GetVisibleDependencies(Fields.Select(x => x.Type)).ToArray();
-				var baseNestedTypesNames = Type.BaseType.GetNestedTypes(CommonBindingFlags).Select(x => x.Name).ToArray();
-				NestedTypes = Type
-					.GetNestedTypes(CommonBindingFlags)
-					.Where(x => IsRequiredNestedType(x, fieldsDirectDeps, allowedCustomAttributes))
-					.Select(x => new ClassInfo(x, allowedCustomAttributes, false))
-					.ToArray();
+				NestedTypes = GetRequiredNestedTypes(type, allowedCustomAttributes, fieldsDirectDeps);
 				IsSerializable = (type.Attributes & TypeAttributes.Serializable) == TypeAttributes.Serializable;
 				CustomAttributesData = GetCustomAttributesData(type, allowedCustomAttributes);
-
 				var deps = new List<Type>();
 				deps.AddRange(NestedTypes.SelectMany(x => x.Dependencies));
 				deps.Add(type.BaseType);
 				deps.AddRange(Fields.Select(x => x.Type));
 				deps.AddRange(CustomAttributesData.Select(x => x.AttributeType));
 				deps.AddRange(Fields.SelectMany(x => x.CustomAttributesData.Select(cad => cad.AttributeType)));
-				try
-				{
-					Dependencies = GetVisibleDependencies(deps).Select(GetMainClassType).Distinct().ToArray();
-					Usings = Dependencies.Select(x => x.Namespace).Where(x => !string.IsNullOrEmpty(x)).Distinct().ToArray();
-				}
-				catch
-				{
+				Dependencies = GetVisibleDependencies(deps).Select(GetMainClassType).Distinct().ToArray();
+				Usings = Dependencies.Select(x => x.Namespace).Where(x => !string.IsNullOrEmpty(x)).Distinct().ToArray();
+			}
 
-				}
+			private static ClassInfo[] GetRequiredNestedTypes(Type type, Type[] allowedCustomAttributes, Type[] fieldsDirectDeps)
+			{
+				return type
+					.GetNestedTypes(CommonBindingFlags)
+					.Where(x => IsRequiredNestedType(x, fieldsDirectDeps, allowedCustomAttributes))
+					.Select(x => new ClassInfo(x, allowedCustomAttributes, false))
+					.ToArray();
 			}
 
 			private static CustomAttributeData[] GetCustomAttributesData(MemberInfo member, Type[] allowedCustomAttributes)
@@ -151,7 +150,7 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 
 			private static ClassFieldInfo[] GetTypeOwnFields(Type type, Type[] allowedCustomAttributes)
 			{
-				var baseTypeFieldNames = type.BaseType?.GetFields().Select(field => field.Name).ToArray() ?? Array.Empty<string>();
+				var baseTypeFieldNames = type.BaseType?.GetFields(CommonBindingFlags).Select(x => x.Name).ToArray() ?? Array.Empty<string>();
 				return type
 					.GetFields(CommonBindingFlags)
 					.Where(x => !baseTypeFieldNames.Contains(x.Name))
