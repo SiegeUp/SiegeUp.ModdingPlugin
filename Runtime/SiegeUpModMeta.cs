@@ -87,15 +87,15 @@ namespace SiegeUp.ModdingPlugin
 
 	public class SiegeUpModShortInfo
 	{
-		public string Name;
-		public int Version;
-		public string Id;
+		public string name;
+		public string version;
+		public string id;
 
 		public SiegeUpModShortInfo(string name, int version, string id)
 		{
-			Name = name;
-			Version = version;
-			Id = id;
+			this.name = name.Replace(" ", "_").ToLower();
+			this.version = $"{version}.0.0";
+			this.id = id;
 		}
 	}
 }
