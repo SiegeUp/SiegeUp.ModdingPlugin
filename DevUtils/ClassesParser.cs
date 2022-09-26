@@ -43,7 +43,7 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 			Directory.CreateDirectory(outputFolder);
 			var time = DateTime.Now;
 			var classesInfo = GetClassesInfo(types);
-			Parallel.ForEach(classesInfo, (data) => ClassSerializer.SerializeClass(outputFolder, data));
+			Parallel.ForEach(classesInfo, (data) => SerializeClass(outputFolder, data));
 			Debug.Log($"Scripts parsing was completed in {(DateTime.Now - time).TotalMilliseconds}ms. Created {classesInfo.Count} files");
 		}
 
@@ -64,6 +64,188 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 				result.Add(classInfo);
 			}
 			return result;
+		}
+
+		private static void SerializeClass(string outputFolder, ClassInfo classInfo)
+		{
+			using (StreamWriter sw = new StreamWriter(Path.Combine(outputFolder, classInfo.Type + ".cs")))
+				SerializeClassInfo(sw, classInfo);
+		}
+
+		private static void SerializeClassInfo(StreamWriter output, ClassInfo classInfo, string indent = "")
+		{
+			if (classInfo.Type.BaseType == typeof(Attribute))
+			{
+				CopyAttributeFile(output, classInfo.Type);
+				return;
+			}
+			if (!classInfo.Type.IsNested && classInfo.Usings.Length > 0)
+			{
+				SerializeClassUsings(output, classInfo.Usings);
+				output.WriteLine();
+			}
+			SerializeAttributes(output, classInfo.CustomAttributesData, indent);
+			if (classInfo.IsSerializable)
+			{
+				SerializeAttribute(output, typeof(SerializableAttribute), null, indent);
+			}
+			SerializeTypeDeclaration(output, classInfo, indent);
+			output.WriteLine(indent + "{");
+			if (classInfo.Type.IsEnum)
+			{
+				SerializeEnumBody(output, classInfo, indent + "\t");
+			}
+			else if (!classInfo.Type.IsInterface)
+			{
+				SerializeFields(output, classInfo.Fields, indent + "\t");
+				foreach (var nestedType in classInfo.NestedTypes)
+				{
+					output.WriteLine();
+					SerializeClassInfo(output, nestedType, indent + "\t");
+				}
+			}
+			output.Write(indent);
+			output.WriteLine("}");
+		}
+
+		private static void CopyAttributeFile(StreamWriter output, Type type)
+		{
+			var projectDir = Path.Combine(Assembly.GetExecutingAssembly().Location, "..", "..", "..");
+			var files = Directory.GetFiles(projectDir, $"{type.Name}*.cs", SearchOption.AllDirectories);
+			using (StreamReader sr = new StreamReader(files.First()))
+				output.Write(sr.ReadToEnd());
+		}
+
+		private static void SerializeEnumBody(StreamWriter output, ClassInfo classInfo, string indent)
+		{
+			foreach (var value in classInfo.Type.GetEnumNames())
+			{
+				output.Write(indent);
+				output.Write(value);
+				output.WriteLine(",");
+			}
+		}
+
+		private static void SerializeTypeDeclaration(StreamWriter output, ClassInfo classInfo, string indent)
+		{
+			output.Write(indent);
+			output.Write(SerializeModifiersAndKeyWords(classInfo.Type.GetTypeInfo()));
+			if (classInfo.Type.IsEnum)
+				output.Write(" enum ");
+			else if (classInfo.Type.IsInterface)
+				output.Write(" interface ");
+			else if (classInfo.Type.IsValueType)
+				output.Write(" struct ");
+			else
+				output.Write(classInfo.ShouldBePartial ? " partial class " : " class ");
+			output.Write(SerializeMemberType(classInfo.Type, true));
+			if (IsRequiredBaseType(classInfo.Type.BaseType))
+				output.Write($" : {classInfo.Type.BaseType}");
+			output.WriteLine();
+		}
+
+		private static void SerializeFields(StreamWriter output, ClassInfo.ClassFieldInfo[] members, string indent = "\t")
+		{
+			foreach (var member in members)
+			{
+				SerializeField(output, member, indent);
+				output.WriteLine();
+			}
+		}
+
+		private static void SerializeField(StreamWriter output, ClassInfo.ClassFieldInfo member, string indent = "\t")
+		{
+			SerializeAttributes(output, member.CustomAttributesData, indent);
+			output.Write(indent);
+			output.Write(SerializeModifiersAndKeyWords(member));
+			output.Write(" ");
+			output.Write(SerializeMemberType(member.Type));
+			output.Write(" ");
+			output.Write(member.Name);
+			output.Write(";");
+		}
+
+		private static string SerializeMemberType(Type type, bool usePureName = false)
+		{
+			if (type.IsArray)
+			{
+				var subtype = type.GetElementType();
+				var data = SerializeMemberType(subtype);
+				var rankData = $"[{new string(',', type.GetArrayRank() - 1)}]";
+				return subtype.IsArray ? data.Insert(data.IndexOf('['), rankData) : data + rankData;
+			}
+			else if (type.IsGenericType)
+			{
+				return $"{type.Name.Substring(0, type.Name.Length - 2)}<{string.Join(", ", type.GetGenericArguments().Select(x => SerializeMemberType(x)))}>";
+			}
+			else
+			{
+				if (usePureName)
+					return type.Name;
+				var typeParts = new[]
+				{
+						type.Namespace?.StartsWith("Unity") ?? false ? type.Namespace : "",
+						type.DeclaringType?.Name ?? "",
+						type.Name
+					}.Where(x => x != "");
+				return string.Join(".", typeParts);
+			}
+		}
+
+		private static void SerializeAttributes(StreamWriter output, IEnumerable<CustomAttributeData> attributes, string indent = "")
+		{
+			foreach (var attr in attributes)
+				SerializeAttribute(output, attr.AttributeType, attr.ConstructorArguments, indent);
+		}
+
+		private static void SerializeAttribute(StreamWriter output, Type attribute, IEnumerable<CustomAttributeTypedArgument> args, string indent)
+		{
+			output.Write($"{indent}[{attribute}");
+			if (args != null)
+				output.Write($"({String.Join(", ", args)})");
+			output.WriteLine("]");
+		}
+
+		private static void SerializeClassUsings(StreamWriter output, IEnumerable<string> namespaces)
+		{
+			foreach (var ns in namespaces)
+				output.WriteLine($"using {ns};");
+		}
+
+		private static string SerializeModifiersAndKeyWords(MemberInfo member)
+		{
+			bool isPublic, isStatic, isVirtual, isAbstract;
+			if (member is FieldInfo field)
+			{
+				(isPublic, isStatic, isVirtual, isAbstract) = (field.IsPublic, field.IsStatic, false, false);
+			}
+			else if (member is PropertyInfo property)
+			{
+				var getMethod = property.GetGetMethod(true);
+				(isPublic, isStatic, isVirtual, isAbstract) =
+					(property.GetGetMethod()?.IsPublic ?? false, getMethod.IsStatic, getMethod.IsVirtual, getMethod.IsAbstract);
+			}
+			else if (member is MethodInfo method)
+			{
+				(isPublic, isStatic, isVirtual, isAbstract) =
+					(method.IsPublic, method.IsStatic, method.IsVirtual, method.IsAbstract);
+			}
+			else if (member is TypeInfo type)
+			{
+				(isPublic, isStatic, isVirtual, isAbstract) =
+					(!type.IsNotPublic, type.IsAbstract && type.IsSealed, false, type.IsAbstract && !type.IsSealed);
+			}
+			else
+				throw new NotImplementedException("Not supported member type");
+			return string.Join(
+				" ",
+				new[] { isPublic ? "public" : "", isStatic ? "static" : "", isVirtual ? "virtual" : "", isAbstract ? "abstract" : "" }
+					.Where(x => x != ""));
+		}
+
+		private static bool IsRequiredBaseType(Type type)
+		{
+			return type != typeof(object) && type != typeof(ValueType) && type != typeof(Enum);
 		}
 
 		private bool IsSimpleType(Type type)
@@ -192,195 +374,6 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 				}
 
 				public static implicit operator FieldInfo(ClassFieldInfo fieldInfo) => fieldInfo.FieldInfo;
-			}
-		}
-
-		private static class ClassSerializer
-		{
-			public static void SerializeClass(string outputFolder, ClassInfo classInfo)
-			{
-				using (StreamWriter sw = new StreamWriter(Path.Combine(outputFolder, classInfo.Type + ".cs")))
-					SerializeClassInfo(sw, classInfo);
-			}
-
-			//todo^ serialize all class attributes
-			private static void SerializeClassInfo(StreamWriter output, ClassInfo classInfo, string indent = "")
-			{
-				if (classInfo.Type.BaseType == typeof(Attribute))
-				{
-					CopyAttributeFile(output, classInfo.Type);
-					return;
-				}
-				if (!classInfo.Type.IsNested && classInfo.Usings.Length > 0)
-				{
-					SerializeClassUsings(output, classInfo.Usings);
-					output.WriteLine();
-				}
-				SerializeAttributes(output, classInfo.CustomAttributesData, indent);
-				if (classInfo.IsSerializable)
-				{
-					SerializeAttribute(output, typeof(SerializableAttribute), null, indent);
-				}
-				SerializeTypeDeclaration(output, classInfo, indent);
-				output.WriteLine(indent + "{");
-				if (classInfo.Type.IsEnum)
-				{
-					SerializeEnumBody(output, classInfo, indent + "\t");
-				}
-				else if (!classInfo.Type.IsInterface)
-				{
-					SerializeFields(output, classInfo.Fields, indent + "\t");
-					foreach (var nestedType in classInfo.NestedTypes)
-					{
-						output.WriteLine();
-						SerializeClassInfo(output, nestedType, indent + "\t");
-					}
-				}
-				output.Write(indent);
-				output.WriteLine("}");
-			}
-
-			private static void CopyAttributeFile(StreamWriter output, Type type)
-			{
-				var projectDir = Path.Combine(Assembly.GetExecutingAssembly().Location, "..", "..", "..");
-				var files = Directory.GetFiles(projectDir, $"{type.Name}*.cs", SearchOption.AllDirectories);
-				using (StreamReader sr = new StreamReader(files.First()))
-					output.Write(sr.ReadToEnd());
-			}
-
-			private static void SerializeEnumBody(StreamWriter output, ClassInfo classInfo, string indent)
-			{
-				foreach (var value in classInfo.Type.GetEnumNames())
-				{
-					output.Write(indent);
-					output.Write(value);
-					output.WriteLine(",");
-				}
-			}
-
-			private static void SerializeTypeDeclaration(StreamWriter output, ClassInfo classInfo, string indent)
-			{
-				output.Write(indent);
-				output.Write(SerializeModifiersAndKeyWords(classInfo.Type.GetTypeInfo()));
-				if (classInfo.Type.IsEnum)
-					output.Write(" enum ");
-				else if (classInfo.Type.IsInterface)
-					output.Write(" interface ");
-				else if (classInfo.Type.IsValueType)
-					output.Write(" struct ");
-				else
-					output.Write(classInfo.ShouldBePartial ? " partial class " : " class ");
-				output.Write(SerializeMemberType(classInfo.Type, true));
-				if (IsRequiredBaseType(classInfo.Type.BaseType))
-					output.Write($" : {classInfo.Type.BaseType}");
-				output.WriteLine();
-			}
-
-			private static void SerializeFields(StreamWriter output, ClassInfo.ClassFieldInfo[] members, string indent = "\t")
-			{
-				foreach (var member in members)
-				{
-					SerializeField(output, member, indent);
-					output.WriteLine();
-				}
-			}
-
-			private static void SerializeField(StreamWriter output, ClassInfo.ClassFieldInfo member, string indent = "\t")
-			{
-				//var serializeAttr = member.GetCustomAttribute<SerializeField>();
-				//if (serializeAttr != null)
-				//	SerializeAttribute(output, serializeAttr.GetType(), null, indent);
-				SerializeAttributes(output, member.CustomAttributesData, indent);
-				output.Write(indent);
-				output.Write(SerializeModifiersAndKeyWords(member));
-				output.Write(" ");
-				output.Write(SerializeMemberType(member.Type));
-				output.Write(" ");
-				output.Write(member.Name);
-				output.Write(";");
-			}
-
-			private static string SerializeMemberType(Type type, bool usePureName = false)
-			{
-				if (type.IsArray)
-				{
-					var subtype = type.GetElementType();
-					var data = SerializeMemberType(subtype);
-					var rankData = $"[{new string(',', type.GetArrayRank() - 1)}]";
-					return subtype.IsArray ? data.Insert(data.IndexOf('['), rankData) : data + rankData;
-				}
-				else if (type.IsGenericType)
-				{
-					return $"{type.Name.Substring(0, type.Name.Length - 2)}<{string.Join(", ", type.GetGenericArguments().Select(x => SerializeMemberType(x)))}>";
-				}
-				else
-				{
-					if (usePureName)
-						return type.Name;
-					var typeParts = new[]
-					{
-						type.Namespace?.StartsWith("Unity") ?? false ? type.Namespace : "",
-						type.DeclaringType?.Name ?? "",
-						type.Name
-					}.Where(x => x != "");
-					return string.Join(".", typeParts);
-				}
-			}
-
-			private static void SerializeAttributes(StreamWriter output, IEnumerable<CustomAttributeData> attributes, string indent = "")
-			{
-				foreach (var attr in attributes)
-					SerializeAttribute(output, attr.AttributeType, attr.ConstructorArguments, indent);
-			}
-
-			private static void SerializeAttribute(StreamWriter output, Type attribute, IEnumerable<CustomAttributeTypedArgument> args, string indent)
-			{
-				output.Write($"{indent}[{attribute}");
-				if (args != null)
-					output.Write($"({String.Join(", ", args)})");
-				output.WriteLine("]");
-			}
-
-			private static void SerializeClassUsings(StreamWriter output, IEnumerable<string> namespaces)
-			{
-				foreach (var ns in namespaces)
-					output.WriteLine($"using {ns};");
-			}
-
-			private static string SerializeModifiersAndKeyWords(MemberInfo member)
-			{
-				bool isPublic, isStatic, isVirtual, isAbstract;
-				if (member is FieldInfo field)
-				{
-					(isPublic, isStatic, isVirtual, isAbstract) = (field.IsPublic, field.IsStatic, false, false);
-				}
-				else if (member is PropertyInfo property)
-				{
-					var getMethod = property.GetGetMethod(true);
-					(isPublic, isStatic, isVirtual, isAbstract) =
-						(property.GetGetMethod()?.IsPublic ?? false, getMethod.IsStatic, getMethod.IsVirtual, getMethod.IsAbstract);
-				}
-				else if (member is MethodInfo method)
-				{
-					(isPublic, isStatic, isVirtual, isAbstract) =
-						(method.IsPublic, method.IsStatic, method.IsVirtual, method.IsAbstract);
-				}
-				else if (member is TypeInfo type)
-				{
-					(isPublic, isStatic, isVirtual, isAbstract) =
-						(!type.IsNotPublic, type.IsAbstract && type.IsSealed, false, type.IsAbstract && !type.IsSealed);
-				}
-				else
-					throw new NotImplementedException("Not supported member type");
-				return string.Join(
-					" ",
-					new[] { isPublic ? "public" : "", isStatic ? "static" : "", isVirtual ? "virtual" : "", isAbstract ? "abstract" : "" }
-						.Where(x => x != ""));
-			}
-
-			private static bool IsRequiredBaseType(Type type)
-			{
-				return type != typeof(object) && type != typeof(ValueType) && type != typeof(Enum);
 			}
 		}
 	}
