@@ -37,7 +37,6 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 
 		public void Parse(string outputFolder, Type[] types)
 		{
-			
 			if (File.Exists(outputFolder))
 				outputFolder = Path.GetDirectoryName(outputFolder);
 			Directory.CreateDirectory(outputFolder);
@@ -105,7 +104,8 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 				}
 			}
 			output.Write(indent);
-			output.WriteLine("}");
+			output.Write("}");
+			output.WriteLine();
 		}
 
 		private static void CopyAttributeFile(StreamWriter output, Type type)
@@ -147,10 +147,7 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 		private static void SerializeFields(StreamWriter output, ClassInfo.ClassFieldInfo[] members, string indent = "\t")
 		{
 			foreach (var member in members)
-			{
 				SerializeField(output, member, indent);
-				output.WriteLine();
-			}
 		}
 
 		private static void SerializeField(StreamWriter output, ClassInfo.ClassFieldInfo member, string indent = "\t")
@@ -162,7 +159,7 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 			output.Write(SerializeMemberType(member.Type));
 			output.Write(" ");
 			output.Write(member.Name);
-			output.Write(";");
+			output.WriteLine(";");
 		}
 
 		private static string SerializeMemberType(Type type, bool usePureName = false)
@@ -184,10 +181,10 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 					return type.Name;
 				var typeParts = new[]
 				{
-						type.Namespace?.StartsWith("Unity") ?? false ? type.Namespace : "",
-						type.DeclaringType?.Name ?? "",
-						type.Name
-					}.Where(x => x != "");
+					type.Namespace?.StartsWith("Unity") ?? false ? type.Namespace : "",
+					type.DeclaringType?.Name ?? "",
+					type.Name
+				}.Where(x => x != "");
 				return string.Join(".", typeParts);
 			}
 		}
@@ -248,12 +245,12 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 			return type != typeof(object) && type != typeof(ValueType) && type != typeof(Enum);
 		}
 
-		private bool IsSimpleType(Type type)
+		private static bool IsSimpleType(Type type)
 		{
 			return !(type.IsArray || type.IsGenericType);
 		}
 
-		private bool IsSystemType(Type type)
+		private static bool IsSystemType(Type type)
 		{
 			var assembly = type.Assembly.GetName().Name;
 			return assembly == "mscorlib" || assembly.StartsWith("Unity") || assembly.StartsWith("System");

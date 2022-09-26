@@ -12,10 +12,6 @@ namespace SiegeUp.ModdingPlugin
 		public const string ModsFolderName = "mods";
 		public const string MetaFileName = "meta.json";
 		public const string PackageMetaFileName = "package.json";
-#if UNITY_EDITOR
-		public static string TempFolder = Path.Combine(Assembly.GetExecutingAssembly().Location, "..", "..", "..", "Temp");
-		
-#endif
 
 		public static string GetDefaultGameFolder()
 		{

@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -45,9 +44,7 @@ namespace SiegeUp.ModdingPlugin
 		public static void CreateModPackage(SiegeUpModBase modBase, string outputFolder)
 		{
 			var files = modBase.GetAllObjects();
-			var tempFolder = Path.Combine(Path.GetTempPath(), modBase.ModInfo.ModName);
-			if (Directory.Exists(tempFolder))
-				Directory.Delete(tempFolder, true);
+			var tempFolder = FileUtil.GetUniqueTempPathInProject();
 			Directory.CreateDirectory(tempFolder);
 			foreach (var file in files.Select(x => AssetDatabase.GetAssetPath(x)))
 				File.Copy(file, Path.Combine(tempFolder, Path.GetFileName(file)));

@@ -1,9 +1,11 @@
-﻿using UnityEngine;
-using System.Linq;
+﻿using System;
 using System.IO;
-using System;
+using System.Linq;
+using UnityEngine;
 #if UNITY_EDITOR
 using UnityEditor;
+using UnityEditor.PackageManager;
+using PackageInfo = UnityEditor.PackageManager.PackageInfo;
 #endif
 
 namespace SiegeUp.ModdingPlugin.DevUtils
@@ -12,15 +14,24 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 	public class PluginVersionChecker : ScriptableObject
 	{
 		private static DateTime _lastUpdateTime = DateTime.MinValue;
-
-		private const string _manifestFileName = @"Assets\SiegeUp.ModdingPlugin\package.json";
+		private static string _pluginManifestPath;
+		private const string _pluginPackageName = "com.siegeup.moddingplugin";
+		private const string _manifestFileName = @"package.json";
 		private const int UpdatePeriodSec = 2;
 
 #if UNITY_EDITOR
 		[InitializeOnLoadMethod]
 		private static void Init()
 		{
-			if (!File.Exists(_manifestFileName))
+			var res = AssetDatabase.FindAssets("package")
+				.Select(AssetDatabase.GUIDToAssetPath)
+				.Where(x => AssetDatabase.LoadAssetAtPath<TextAsset>(x) != null)
+				.Select(PackageInfo.FindForAssetPath)
+				.FirstOrDefault(x => x.name == _pluginPackageName);
+			if (res == null)
+				return;
+			_pluginManifestPath = Path.Combine(res.source == PackageSource.Local ? res.resolvedPath : res.assetPath, _manifestFileName);
+			if (!File.Exists(_pluginManifestPath))
 				return;
 			EditorApplication.update -= OnEditorUpdate;
 			EditorApplication.update += OnEditorUpdate;
@@ -39,7 +50,7 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 
 		private static string GetPluginVersionFromManifest()
 		{
-			var data = File.ReadAllLines(_manifestFileName);
+			var data = File.ReadAllLines(_pluginManifestPath);
 			var versionInfo = data.FirstOrDefault(x => x.Contains("\"version\":"));
 			return GetVersionFromJsonString(versionInfo);
 		}
