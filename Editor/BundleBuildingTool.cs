@@ -47,7 +47,10 @@ namespace SiegeUp.ModdingPlugin
 			var tempFolder = FileUtil.GetUniqueTempPathInProject();
 			Directory.CreateDirectory(tempFolder);
 			foreach (var file in files.Select(x => AssetDatabase.GetAssetPath(x)))
+			{
 				File.Copy(file, Path.Combine(tempFolder, Path.GetFileName(file)));
+				File.Copy(file+".meta", Path.Combine(tempFolder, Path.GetFileName(file) + ".meta"));
+			}
 			FileUtils.CreatePackageMetaFile(modBase.ModInfo, tempFolder);
 			Client.Pack(tempFolder, outputFolder);
 		}
