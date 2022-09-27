@@ -5,18 +5,23 @@ In order to use:
 1. Install Unity3d of version 2019.4.35f
 2. Thee options: 
 
-    a. Download the project from [this](https://github.com/SiegeUp/SiegeUp-Modding-Kit) repository
+	a. Download the project from [SiegeUp Mod Example](https://github.com/SiegeUp/SiegeUp-Mod-Example) repository
     
-    b. Alternatively, create your own Unity project and import the plugin in menu `Window -> Package Manager` https://github.com/SiegeUp/SiegeUp-Modding-Plugin (required [git](https://git-scm.com/downloads) installed on pc)
+	b. Another method: create your own Unity project and import the plugin from [openupm](https://openupm.com/packages/com.siegeup.moddingplugin/#modal-manualinstallation)
 	
-	c. Another method: install package via [upm]().
+	c. Alternatively, import the plugin by git url ([guide](https://docs.unity3d.com/Manual/upm-ui-giturl.html)). Required [git](https://git-scm.com/downloads) installed on pc.
 
 ## Update
-In order to update plugin version:
-1. Delete SiegeUp.ModdingPlugin directory (if you have one)
+In order to update plugin installed from *openupm*:
+1. Open `Window -> Package Manager`
+2. Select `SiegeUp Modding Plugin`
+3. Click `Update` button
+
+In order to update plugin installed by *git url*:
+1. Delete SiegeUp.ModdingPlugin directory from Assets folder (if you have one)
 2. Open `Window -> Package Manager`
 3. Click [+] button
-4. Enter https://github.com/SiegeUp/SiegeUp-Modding-Plugin
+4. Enter https://github.com/SiegeUp/SiegeUp-Modding-Plugin.git
 
 ## Install mod
 If you are ready to use mods, put it's folder into `mods` directory, depending on your platform:
