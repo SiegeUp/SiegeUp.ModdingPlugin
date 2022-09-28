@@ -1,8 +1,10 @@
 # SiegeUp-Modding-Plugin
 
+[![openupm](https://img.shields.io/npm/v/com.siegeup.moddingplugin?label=openupm&registry_uri=https://package.openupm.com)](https://openupm.com/packages/com.siegeup.moddingplugin/)
+
 ## Install plugin
 In order to use:
-1. Install Unity3d of version 2019.4.35f
+1. Install Unity3d of version 2021.3.10f
 2. Thee options: 
 
 	a. Download the project from [SiegeUp Mod Example](https://github.com/SiegeUp/SiegeUp-Mod-Example) repository
