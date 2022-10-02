@@ -9,7 +9,7 @@ namespace SiegeUp.ModdingPlugin
 		public readonly VersionInfo CurrentPluginVersion;
 		public readonly VersionInfo CurrentGameVersion;
 		public List<AssetBundle> LoadedBundles => _loadedBundles;
-		public const string Version = "1.3.4";
+		public const string Version = "1.3.5";
 
 		private readonly List<AssetBundle> _loadedBundles = new List<AssetBundle>();
 

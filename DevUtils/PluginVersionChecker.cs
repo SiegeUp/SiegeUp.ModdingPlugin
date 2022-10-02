@@ -27,7 +27,7 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 				.Select(AssetDatabase.GUIDToAssetPath)
 				.Where(x => AssetDatabase.LoadAssetAtPath<TextAsset>(x) != null)
 				.Select(PackageInfo.FindForAssetPath)
-				.FirstOrDefault(x => x.name == _pluginPackageName);
+				.FirstOrDefault(x => x?.name == _pluginPackageName);
 			if (res == null)
 				return;
 			_pluginManifestPath = Path.Combine(res.source == PackageSource.Local ? res.resolvedPath : res.assetPath, _manifestFileName);
