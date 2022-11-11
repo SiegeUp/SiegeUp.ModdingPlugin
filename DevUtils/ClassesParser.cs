@@ -154,8 +154,12 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 		{
 			SerializeAttributes(output, member.CustomAttributesData, indent);
 			output.Write(indent);
-			output.Write(SerializeModifiersAndKeyWords(member));
-			output.Write(" ");
+			var modifiers = SerializeModifiersAndKeyWords(member);
+			if (modifiers != "")
+			{
+				output.Write(modifiers);
+				output.Write(" ");
+			}
 			output.Write(SerializeMemberType(member.Type));
 			output.Write(" ");
 			output.Write(member.Name);
