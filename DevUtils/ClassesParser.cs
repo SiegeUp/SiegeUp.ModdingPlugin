@@ -203,8 +203,21 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 		{
 			output.Write($"{indent}[{attribute}");
 			if (args != null)
-				output.Write($"({String.Join(", ", args)})");
+				output.Write($"({String.Join(", ", GetAttributeArgsStringValues(args))})");
 			output.WriteLine("]");
+		}
+
+		private static IEnumerable<string> GetAttributeArgsStringValues(IEnumerable<CustomAttributeTypedArgument> args)
+		{
+			foreach (var arg in args)
+			{
+				if (arg.Value == null)
+					yield return "null";
+				else if (arg.ArgumentType == typeof(Type) || arg.ArgumentType == typeof(string))
+					yield return arg.ToString();
+				else
+					yield return arg.Value?.ToString();
+			}
 		}
 
 		private static void SerializeClassUsings(StreamWriter output, IEnumerable<string> namespaces)
