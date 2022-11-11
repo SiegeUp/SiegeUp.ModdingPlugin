@@ -31,7 +31,7 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 			foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
 				if (assembly.GetName().Name == "Assembly-CSharp")
 					mainAssembly = assembly;
-			var types = mainAssembly.GetTypes().Where(x => x.GetCustomAttributes(filterAttributeType, false).Length > 0).ToArray();
+			var types = mainAssembly.GetTypes().Where(x => x.IsDefined(filterAttributeType, false)).ToArray();
 			Parse(outputFolder, types);
 		}
 
@@ -346,9 +346,8 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 
 			private static bool IsRequiredNestedType(Type type, Type[] requiredTypes, Type[] allowedCustomAttributes)
 			{
-				var customAttributes = type.GetCustomAttributesData();
 				return requiredTypes.Contains(type)
-					|| (type.IsVisible || customAttributes.Any(x => allowedCustomAttributes.Contains(x.AttributeType)))
+					|| (type.IsVisible || allowedCustomAttributes.Any(x => type.IsDefined(x)))
 					&& type.BaseType != typeof(MulticastDelegate)
 					&& !type.Name.StartsWith("Legacy_");
 			}
