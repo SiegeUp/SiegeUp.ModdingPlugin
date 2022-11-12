@@ -199,10 +199,10 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 				SerializeAttribute(output, attr.AttributeType, attr.ConstructorArguments, indent);
 		}
 
-		private static void SerializeAttribute(StreamWriter output, Type attribute, IEnumerable<CustomAttributeTypedArgument> args, string indent)
+		private static void SerializeAttribute(StreamWriter output, Type attribute, IList<CustomAttributeTypedArgument> args, string indent)
 		{
 			output.Write($"{indent}[{attribute}");
-			if (args != null)
+			if (args != null && args.Count > 0)
 				output.Write($"({String.Join(", ", GetAttributeArgsStringValues(args))})");
 			output.WriteLine("]");
 		}
