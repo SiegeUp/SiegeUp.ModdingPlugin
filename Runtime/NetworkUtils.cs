@@ -23,7 +23,7 @@ namespace SiegeUp.ModdingPlugin
 				request.downloadHandler = new DownloadHandlerFile(filePath);
 				var operation = request.SendWebRequest();
 				yield return new WaitUntil(() => operation.isDone);
-				if (request.isNetworkError || request.isHttpError)
+				if (request.result != UnityWebRequest.Result.Success)
 				{
 					Debug.LogError(request.error);
 					callback(false);
