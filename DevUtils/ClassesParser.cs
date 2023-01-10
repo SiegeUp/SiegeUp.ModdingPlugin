@@ -46,7 +46,7 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 			Debug.Log($"Scripts parsing was completed in {(DateTime.Now - time).TotalMilliseconds}ms. Created {classesInfo.Count} files");
 		}
 
-		private HashSet<ClassInfo> GetClassesInfo(Type[] types)
+        HashSet<ClassInfo> GetClassesInfo(Type[] types)
 		{
 			var result = new HashSet<ClassInfo>();
 			var knownTypes = new HashSet<Type>(types);
@@ -65,13 +65,13 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 			return result;
 		}
 
-		private static void SerializeClass(string outputFolder, ClassInfo classInfo)
+        static void SerializeClass(string outputFolder, ClassInfo classInfo)
 		{
 			using (StreamWriter sw = new StreamWriter(Path.Combine(outputFolder, classInfo.Type + ".cs")))
 				SerializeClassInfo(sw, classInfo);
 		}
 
-		private static void SerializeClassInfo(StreamWriter output, ClassInfo classInfo, string indent = "")
+        static void SerializeClassInfo(StreamWriter output, ClassInfo classInfo, string indent = "")
 		{
 			if (classInfo.Type.BaseType == typeof(Attribute))
 			{
@@ -108,7 +108,7 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 			output.WriteLine();
 		}
 
-		private static void CopyAttributeFile(StreamWriter output, Type type)
+        static void CopyAttributeFile(StreamWriter output, Type type)
 		{
 			var projectDir = Path.Combine(Assembly.GetExecutingAssembly().Location, "..", "..", "..");
 			var files = Directory.GetFiles(projectDir, $"{type.Name}*.cs", SearchOption.AllDirectories);
@@ -116,7 +116,7 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 				output.Write(sr.ReadToEnd());
 		}
 
-		private static void SerializeEnumBody(StreamWriter output, ClassInfo classInfo, string indent)
+        static void SerializeEnumBody(StreamWriter output, ClassInfo classInfo, string indent)
 		{
 			foreach (var value in classInfo.Type.GetEnumNames())
 			{
@@ -126,7 +126,7 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 			}
 		}
 
-		private static void SerializeTypeDeclaration(StreamWriter output, ClassInfo classInfo, string indent)
+        static void SerializeTypeDeclaration(StreamWriter output, ClassInfo classInfo, string indent)
 		{
 			output.Write(indent);
 			output.Write(SerializeModifiersAndKeyWords(classInfo.Type.GetTypeInfo()));
@@ -144,13 +144,13 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 			output.WriteLine();
 		}
 
-		private static void SerializeFields(StreamWriter output, ClassInfo.ClassFieldInfo[] members, string indent = "\t")
+        static void SerializeFields(StreamWriter output, ClassInfo.ClassFieldInfo[] members, string indent = "\t")
 		{
 			foreach (var member in members)
 				SerializeField(output, member, indent);
 		}
 
-		private static void SerializeField(StreamWriter output, ClassInfo.ClassFieldInfo member, string indent = "\t")
+        static void SerializeField(StreamWriter output, ClassInfo.ClassFieldInfo member, string indent = "\t")
 		{
 			SerializeAttributes(output, member.CustomAttributesData, indent);
 			output.Write(indent);
@@ -166,7 +166,7 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 			output.WriteLine(";");
 		}
 
-		private static string SerializeMemberType(Type type, bool usePureName = false)
+        static string SerializeMemberType(Type type, bool usePureName = false)
 		{
 			if (type.IsArray)
 			{
@@ -193,13 +193,13 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 			}
 		}
 
-		private static void SerializeAttributes(StreamWriter output, IEnumerable<CustomAttributeData> attributes, string indent = "")
+        static void SerializeAttributes(StreamWriter output, IEnumerable<CustomAttributeData> attributes, string indent = "")
 		{
 			foreach (var attr in attributes)
 				SerializeAttribute(output, attr.AttributeType, attr.ConstructorArguments, indent);
 		}
 
-		private static void SerializeAttribute(StreamWriter output, Type attribute, IList<CustomAttributeTypedArgument> args, string indent)
+        static void SerializeAttribute(StreamWriter output, Type attribute, IList<CustomAttributeTypedArgument> args, string indent)
 		{
 			output.Write($"{indent}[{attribute}");
 			if (args != null && args.Count > 0)
@@ -207,7 +207,7 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 			output.WriteLine("]");
 		}
 
-		private static IEnumerable<string> GetAttributeArgsStringValues(IEnumerable<CustomAttributeTypedArgument> args)
+        static IEnumerable<string> GetAttributeArgsStringValues(IEnumerable<CustomAttributeTypedArgument> args)
 		{
 			foreach (var arg in args)
 			{
@@ -220,13 +220,13 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 			}
 		}
 
-		private static void SerializeClassUsings(StreamWriter output, IEnumerable<string> namespaces)
+        static void SerializeClassUsings(StreamWriter output, IEnumerable<string> namespaces)
 		{
 			foreach (var ns in namespaces)
 				output.WriteLine($"using {ns};");
 		}
 
-		private static string SerializeModifiersAndKeyWords(MemberInfo member)
+        static string SerializeModifiersAndKeyWords(MemberInfo member)
 		{
 			bool isPublic, isStatic, isVirtual, isAbstract;
 			if (member is FieldInfo field)
@@ -257,23 +257,23 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 					.Where(x => x != ""));
 		}
 
-		private static bool IsRequiredBaseType(Type type)
+        static bool IsRequiredBaseType(Type type)
 		{
 			return type != typeof(object) && type != typeof(ValueType) && type != typeof(Enum);
 		}
 
-		private static bool IsSimpleType(Type type)
+        static bool IsSimpleType(Type type)
 		{
 			return !(type.IsArray || type.IsGenericType);
 		}
 
-		private static bool IsSystemType(Type type)
+        static bool IsSystemType(Type type)
 		{
 			var assembly = type.Assembly.GetName().Name;
 			return assembly == "mscorlib" || assembly.StartsWith("Unity") || assembly.StartsWith("System");
 		}
 
-		private class ClassInfo
+        class ClassInfo
 		{
 			public string[] Usings;
 			public Type Type;
@@ -284,7 +284,7 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 			public ClassFieldInfo[] Fields;
 			public ClassInfo[] NestedTypes;
 
-			private static readonly BindingFlags CommonBindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static;
+            static readonly BindingFlags CommonBindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static;
 
 			public ClassInfo(Type type, Type[] allowedCustomAttributes, bool shouldBePartial)
 			{
@@ -305,7 +305,7 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 				Usings = Dependencies.Select(x => x.Namespace).Where(x => !string.IsNullOrEmpty(x)).Distinct().ToArray();
 			}
 
-			private static ClassInfo[] GetRequiredNestedTypes(Type type, Type[] allowedCustomAttributes, Type[] fieldsDirectDeps)
+            static ClassInfo[] GetRequiredNestedTypes(Type type, Type[] allowedCustomAttributes, Type[] fieldsDirectDeps)
 			{
 				return type
 					.GetNestedTypes(CommonBindingFlags)
@@ -314,7 +314,7 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 					.ToArray();
 			}
 
-			private static CustomAttributeData[] GetCustomAttributesData(MemberInfo member, Type[] allowedCustomAttributes)
+            static CustomAttributeData[] GetCustomAttributesData(MemberInfo member, Type[] allowedCustomAttributes)
 			{
 				return member
 					.GetCustomAttributesData()
@@ -322,12 +322,12 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 					.ToArray();
 			}
 
-			private static Type GetMainClassType(Type type)
+            static Type GetMainClassType(Type type)
 			{
 				return type.IsNested ? Type.GetType(type.FullName.Substring(0, type.FullName.IndexOf("+")) + ", " + type.Assembly) : type;
 			}
 
-			private static IEnumerable<Type> GetVisibleDependencies(IEnumerable<Type> types)
+            static IEnumerable<Type> GetVisibleDependencies(IEnumerable<Type> types)
 			{
 				var knownTypes = new HashSet<Type>(types);
 				var stack = new Stack<Type>(knownTypes);
@@ -344,7 +344,7 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 				}
 			}
 
-			private static ClassFieldInfo[] GetTypeOwnFields(Type type, Type[] allowedCustomAttributes)
+            static ClassFieldInfo[] GetTypeOwnFields(Type type, Type[] allowedCustomAttributes)
 			{
 				var baseTypeFieldNames = type.BaseType?.GetFields(CommonBindingFlags).Select(x => x.Name).ToArray() ?? Array.Empty<string>();
 				return type
@@ -355,13 +355,13 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 					.ToArray();
 			}
 
-			private static bool IsRequiredField(ClassFieldInfo member)
+            static bool IsRequiredField(ClassFieldInfo member)
 			{
 				var customAttributes = member.CustomAttributesData;
 				return member.Type.BaseType != typeof(MulticastDelegate) && (member.IsPublic || customAttributes.Length > 0);
 			}
 
-			private static bool IsRequiredNestedType(Type type, Type[] requiredTypes, Type[] allowedCustomAttributes)
+            static bool IsRequiredNestedType(Type type, Type[] requiredTypes, Type[] allowedCustomAttributes)
 			{
 				return requiredTypes.Contains(type)
 					|| (type.IsVisible || allowedCustomAttributes.Any(x => type.IsDefined(x)))
@@ -375,7 +375,7 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 				public bool IsPublic;
 				public string Name;
 				public CustomAttributeData[] CustomAttributesData;
-				private readonly FieldInfo FieldInfo;
+                readonly FieldInfo FieldInfo;
 
 				public ClassFieldInfo(FieldInfo field, Type[] allowedCustomAttributes)
 				{

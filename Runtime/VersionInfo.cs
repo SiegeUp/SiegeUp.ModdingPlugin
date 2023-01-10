@@ -6,7 +6,7 @@
 		public int Minor { get; private set; }
 		public int Revision { get; private set; }
 
-		private const string DefaultVersion = "0.0.0";
+        const string DefaultVersion = "0.0.0";
 
 		public VersionInfo(string version)
 		{
@@ -36,7 +36,7 @@
 			return $"{Major}.{Minor}.{Revision}";
 		}
 
-		private void ParseValuesFromString(string value)
+        void ParseValuesFromString(string value)
 		{
 			var data = value.Split('.');
 			int revisionLength = data[2].IndexOf('r');

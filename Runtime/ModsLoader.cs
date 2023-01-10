@@ -8,10 +8,10 @@ namespace SiegeUp.ModdingPlugin
 		public static ModsLoader Instance { get; private set; }
 		public readonly VersionInfo CurrentPluginVersion;
 		public readonly VersionInfo CurrentGameVersion;
-		public List<AssetBundle> LoadedBundles => _loadedBundles;
+		public IReadOnlyList<AssetBundle> LoadedBundles => _loadedBundles;
 		public const string Version = "1.3.5";
 
-		private readonly List<AssetBundle> _loadedBundles = new List<AssetBundle>();
+        readonly List<AssetBundle> _loadedBundles = new List<AssetBundle>();
 
 		public ModsLoader(string gameVersion)
 		{

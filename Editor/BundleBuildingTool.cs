@@ -5,7 +5,7 @@ using UnityEditor;
 using UnityEditor.PackageManager;
 using UnityEngine;
 
-namespace SiegeUp.ModdingPlugin
+namespace SiegeUp.ModdingPlugin.Editor
 {
 	public class BundleBuildingTool
 	{
@@ -55,7 +55,7 @@ namespace SiegeUp.ModdingPlugin
 			Client.Pack(tempFolder, outputFolder);
 		}
 
-		private static void BuildAssetBundle(SiegeUpModBase modBase, AssetBundleBuild[] map, BuildTarget targetPlatform, string outputDir)
+        static void BuildAssetBundle(SiegeUpModBase modBase, AssetBundleBuild[] map, BuildTarget targetPlatform, string outputDir)
 		{
 			modBase.ModInfo.TryGetBuildInfo(SupportedPlatforms[targetPlatform], out var prevBuildInfo);
 			modBase.UpdateBuildInfo(SupportedPlatforms[targetPlatform]);
@@ -68,7 +68,7 @@ namespace SiegeUp.ModdingPlugin
 			modBase.UpdateBuildInfo(SupportedPlatforms[targetPlatform], prevBuildInfo);
 		}
 
-		private static void RegeneratePrefabIds(SiegeUpModBase modBase)
+        static void RegeneratePrefabIds(SiegeUpModBase modBase)
 		{
 			const string prefabRefName = "PrefabRef";
 			var allObjects = modBase.GetAllObjects();

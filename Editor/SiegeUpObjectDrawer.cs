@@ -1,7 +1,7 @@
 ﻿using UnityEditor;
 using UnityEngine;
 
-namespace SiegeUp.ModdingPlugin
+namespace SiegeUp.ModdingPlugin.Editor
 {
 	[CustomPropertyDrawer(typeof(SiegeUpModBase.ObjectRecord))]
 	public class SiegeUpObjectDrawer : PropertyDrawer

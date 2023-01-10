@@ -143,7 +143,7 @@ namespace SiegeUp.ModdingPlugin
 			return path.Substring(nameStartIndex, nameLength);
 		}
 
-		private static string FindModFolder(string modName)
+        static string FindModFolder(string modName)
 		{
 			modName = modName.ToLower();
 			var modsFolders = Directory

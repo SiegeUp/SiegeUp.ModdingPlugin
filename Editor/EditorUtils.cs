@@ -1,8 +1,8 @@
 ﻿using UnityEditor;
 
-namespace SiegeUp.ModdingPlugin
+namespace SiegeUp.ModdingPlugin.Editor
 {
-	class EditorUtils
+    internal class EditorUtils
 	{
 		public static bool ShowOpenFolderDialogue(string message, out string selectedPath)
 		{

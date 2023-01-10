@@ -29,14 +29,15 @@ namespace SiegeUp.ModdingPlugin
 		}
 
 		[SerializeField]
-		private string modsFolder;
-		private const string ConfigFolderName = "SiegeUp Modding Plugin Config";
+        string modsFolder;
 
-		private void OnEnable() => Instance = this;
+        const string ConfigFolderName = "SiegeUp Modding Plugin Config";
+
+        void OnEnable() => Instance = this;
 
 #if UNITY_EDITOR
 		[InitializeOnLoadMethod]
-		private static void FindInstance()
+        static void FindInstance()
 		{
 			string[] assets = AssetDatabase.FindAssets($"Default t:{nameof(SiegeUpModdingPluginConfig)}");
 			if (assets.Length > 0)

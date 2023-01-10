@@ -44,7 +44,7 @@ namespace SiegeUp.ModdingPlugin
 #endif
 		}
 
-		private void RemoveNullRecords()
+        void RemoveNullRecords()
 		{
 			ObjectRecords = ObjectRecords.Where(x => x != null && x.Prefab).ToList();
 		}

@@ -8,8 +8,7 @@ namespace SiegeUp.ModdingPlugin
 {
 	public class ModCommandsExecutor : MonoBehaviour
 	{
-		public Dictionary<string, Func<IEnumerable<string>, IEnumerator>> Arguments = 
-			new Dictionary<string, Func<IEnumerable<string>, IEnumerator>>()
+		readonly Dictionary<string, Func<IEnumerable<string>, IEnumerator>> Arguments = new()
 		{
 			{ "add", args => DownloadModFromGit(string.Join(" ", args)) },
 			{ "list", args => ListInstalledMods(args)},

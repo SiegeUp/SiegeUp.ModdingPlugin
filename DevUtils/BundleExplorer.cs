@@ -11,13 +11,14 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 	public class BundleExplorer : MonoBehaviour
 	{
 		[SerializeField]
-		private List<GameObject> _spawnedObjects = new List<GameObject>();
+        List<GameObject> _spawnedObjects = new List<GameObject>();
 		[SerializeField]
-		private List<SiegeUpModBase> _loadedMods = new List<SiegeUpModBase>();
-		private ModsLoader _modsLoader;
-		private const int ObjectsInterval = 2;
+        List<SiegeUpModBase> _loadedMods = new List<SiegeUpModBase>();
 
-		private void OnEnable()
+        ModsLoader _modsLoader;
+        const int ObjectsInterval = 2;
+
+        void OnEnable()
 		{
 			_modsLoader = new ModsLoader("1.1.102r19");
 		}
@@ -48,7 +49,7 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 			_loadedMods.Clear();
 		}
 
-		private void OnDestroy()
+        void OnDestroy()
 		{
 			UnloadAllBundles();
 		}
@@ -58,9 +59,9 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 	[CustomEditor(typeof(BundleExplorer))]
 	public class BundleExplorerGUI : Editor
 	{
-		private BundleExplorer _targetObject;
+        BundleExplorer _targetObject;
 
-		private void OnEnable() => _targetObject = (BundleExplorer)target;
+        void OnEnable() => _targetObject = (BundleExplorer)target;
 
 		public override void OnInspectorGUI()
 		{

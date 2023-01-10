@@ -13,15 +13,15 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 	[ExecuteInEditMode]
 	public class PluginVersionChecker : ScriptableObject
 	{
-		private static DateTime _lastUpdateTime = DateTime.MinValue;
-		private static string _pluginManifestPath;
-		private const string _pluginPackageName = "com.siegeup.moddingplugin";
-		private const string _manifestFileName = @"package.json";
-		private const int UpdatePeriodSec = 2;
+        static DateTime _lastUpdateTime = DateTime.MinValue;
+        static string _pluginManifestPath;
+        const string _pluginPackageName = "com.siegeup.moddingplugin";
+        const string _manifestFileName = @"package.json";
+        const int UpdatePeriodSec = 2;
 
 #if UNITY_EDITOR
 		[InitializeOnLoadMethod]
-		private static void Init()
+        static void Init()
 		{
 			var res = AssetDatabase.FindAssets("package")
 				.Select(AssetDatabase.GUIDToAssetPath)
@@ -37,7 +37,7 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 			EditorApplication.update += OnEditorUpdate;
 		}
 
-		private static void OnEditorUpdate()
+        static void OnEditorUpdate()
 		{
 			if ((DateTime.UtcNow - _lastUpdateTime).TotalSeconds < UpdatePeriodSec)
 				return;
@@ -48,14 +48,14 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 					$"Manifest ver: {versionInManifest}. ModsLoader ver: {ModsLoader.Version}");
 		}
 
-		private static string GetPluginVersionFromManifest()
+        static string GetPluginVersionFromManifest()
 		{
 			var data = File.ReadAllLines(_pluginManifestPath);
 			var versionInfo = data.FirstOrDefault(x => x.Contains("\"version\":"));
 			return GetVersionFromJsonString(versionInfo);
 		}
 
-		private static string GetVersionFromJsonString(string infoLine)
+        static string GetVersionFromJsonString(string infoLine)
 		{
 			infoLine = infoLine.Replace(",", "");
 			int separatorIndex = infoLine.LastIndexOf(':');

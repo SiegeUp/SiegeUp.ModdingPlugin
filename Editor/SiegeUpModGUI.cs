@@ -2,14 +2,14 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
-namespace SiegeUp.ModdingPlugin
+namespace SiegeUp.ModdingPlugin.Editor
 {
 	[CustomEditor(typeof(SiegeUpModBase))]
-	public class SiegeUpModGUI : Editor
+	public class SiegeUpModGUI : UnityEditor.Editor
 	{
-		private SiegeUpModBase _targetObject;
+        SiegeUpModBase _targetObject;
 
-		private void OnEnable() => _targetObject = (SiegeUpModBase)target;
+        void OnEnable() => _targetObject = (SiegeUpModBase)target;
 
 		public override void OnInspectorGUI()
 		{
@@ -54,7 +54,7 @@ namespace SiegeUp.ModdingPlugin
 			base.OnInspectorGUI();
 		}
 
-		private bool ValidateModsFolder()
+        bool ValidateModsFolder()
 		{
 			if (SiegeUpModdingPluginConfig.Instance.IsValidModsFolder)
 				return true;

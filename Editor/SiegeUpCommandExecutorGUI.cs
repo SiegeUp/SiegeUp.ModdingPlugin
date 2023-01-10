@@ -2,15 +2,15 @@
 using UnityEditor;
 using UnityEngine;
 
-namespace SiegeUp.ModdingPlugin
+namespace SiegeUp.ModdingPlugin.Editor
 {
 	[CustomEditor(typeof(ModCommandsExecutor))]
-	public class TestingToolGUI : Editor
+	public class TestingToolGUI : UnityEditor.Editor
 	{
-		private ModCommandsExecutor _targetObject;
-		private string _command = "";
+        ModCommandsExecutor _targetObject;
+        string _command = "";
 
-		private void OnEnable() => _targetObject = (ModCommandsExecutor)target;
+        void OnEnable() => _targetObject = (ModCommandsExecutor)target;
 
 		public override void OnInspectorGUI()
 		{
