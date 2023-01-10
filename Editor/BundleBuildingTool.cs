@@ -28,7 +28,7 @@ namespace SiegeUp.ModdingPlugin.Editor
 				return;
 			Debug.Log("Output directory: " + modDirectory);
 
-			AssetBundleBuild[] map = new AssetBundleBuild[1];
+			var map = new AssetBundleBuild[1];
 			map[0].assetNames = new[] { AssetDatabase.GetAssetPath(modBase) };
 
 			foreach (var platform in targetPlatforms)
@@ -44,9 +44,9 @@ namespace SiegeUp.ModdingPlugin.Editor
 		public static void CreateModPackage(SiegeUpModBase modBase, string outputFolder)
 		{
 			var files = modBase.GetAllObjects();
-			var tempFolder = FileUtil.GetUniqueTempPathInProject();
+			string tempFolder = FileUtil.GetUniqueTempPathInProject();
 			Directory.CreateDirectory(tempFolder);
-			foreach (var file in files.Select(x => AssetDatabase.GetAssetPath(x)))
+			foreach (string file in files.Select(x => AssetDatabase.GetAssetPath(x)))
 			{
 				File.Copy(file, Path.Combine(tempFolder, Path.GetFileName(file)));
 				File.Copy(file+".meta", Path.Combine(tempFolder, Path.GetFileName(file) + ".meta"));

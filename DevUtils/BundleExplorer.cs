@@ -11,9 +11,9 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 	public class BundleExplorer : MonoBehaviour
 	{
 		[SerializeField]
-        List<GameObject> spawnedObjects = new List<GameObject>();
+        List<GameObject> spawnedObjects = new();
 		[SerializeField]
-        List<SiegeUpModBase> loadedMods = new List<SiegeUpModBase>();
+        List<SiegeUpModBase> loadedMods = new();
 
         ModsLoader modsLoader;
         const int ObjectsInterval = 2;

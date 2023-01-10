@@ -144,7 +144,7 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 			output.WriteLine();
 		}
 
-        static void SerializeFields(StreamWriter output, ClassInfo.ClassFieldInfo[] members, string indent = "\t")
+        static void SerializeFields(StreamWriter output, IEnumerable<ClassInfo.ClassFieldInfo> members, string indent = "\t")
 		{
 			foreach (var member in members)
 				SerializeField(output, member, indent);
@@ -203,7 +203,7 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 		{
 			output.Write($"{indent}[{attribute}");
 			if (args != null && args.Count > 0)
-				output.Write($"({String.Join(", ", GetAttributeArgsStringValues(args))})");
+				output.Write($"({string.Join(", ", GetAttributeArgsStringValues(args))})");
 			output.WriteLine("]");
 		}
 
@@ -364,10 +364,10 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 				return member.Type.BaseType != typeof(MulticastDelegate) && (member.IsPublic || customAttributes.Length > 0);
 			}
 
-            static bool IsRequiredNestedType(Type type, Type[] requiredTypes, Type[] allowedCustomAttributes)
+            static bool IsRequiredNestedType(Type type, IEnumerable<Type> requiredTypes, IEnumerable<Type> allowedCustomAttributes)
 			{
 				return requiredTypes.Contains(type)
-					|| (type.IsVisible || allowedCustomAttributes.Any(x => type.IsDefined(x)))
+					|| (type.IsVisible || allowedCustomAttributes.Any(type.IsDefined))
 					&& type.BaseType != typeof(MulticastDelegate)
 					&& !type.Name.StartsWith("Legacy_");
 			}
