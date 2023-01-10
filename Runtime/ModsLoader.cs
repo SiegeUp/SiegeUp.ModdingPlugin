@@ -8,10 +8,10 @@ namespace SiegeUp.ModdingPlugin
 		public static ModsLoader Instance { get; private set; }
 		public readonly VersionInfo CurrentPluginVersion;
 		public readonly VersionInfo CurrentGameVersion;
-		public IReadOnlyList<AssetBundle> LoadedBundles => _loadedBundles;
-		public const string Version = "1.3.5";
+		public IReadOnlyList<AssetBundle> LoadedBundles => loadedBundles;
+		public const string Version = "1.3.7";
 
-        readonly List<AssetBundle> _loadedBundles = new List<AssetBundle>();
+        readonly List<AssetBundle> loadedBundles = new();
 
 		public ModsLoader(string gameVersion)
 		{
@@ -22,7 +22,7 @@ namespace SiegeUp.ModdingPlugin
 
 		public List<SiegeUpModBase> LoadInstalledMods()
 		{
-			List<SiegeUpModBase> mods = new List<SiegeUpModBase>();
+			List<SiegeUpModBase> mods = new();
 
 			var platform = Utils.GetCurrentPlatform();
 			if (platform == PlatformShortName.Unsupported)
@@ -58,15 +58,15 @@ namespace SiegeUp.ModdingPlugin
 				Debug.LogWarning($"Failed to load AssetBundle from {path} because it has no {nameof(SiegeUpModBase)} asset");
 				return null;
 			}
-			_loadedBundles.Add(loadedAssetBundle);
+			loadedBundles.Add(loadedAssetBundle);
 			return bundleAssets[0];
 		}
 
 		public void UnloadMods()
 		{
-			foreach (var bundle in _loadedBundles)
+			foreach (var bundle in loadedBundles)
 				bundle.Unload(true);
-			_loadedBundles.Clear();
+			loadedBundles.Clear();
 		}
 
 		public bool CanLoad(SiegeUpModBundleInfo buildInfo)

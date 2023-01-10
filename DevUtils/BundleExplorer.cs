@@ -11,42 +11,42 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 	public class BundleExplorer : MonoBehaviour
 	{
 		[SerializeField]
-        List<GameObject> _spawnedObjects = new List<GameObject>();
+        List<GameObject> spawnedObjects = new List<GameObject>();
 		[SerializeField]
-        List<SiegeUpModBase> _loadedMods = new List<SiegeUpModBase>();
+        List<SiegeUpModBase> loadedMods = new List<SiegeUpModBase>();
 
-        ModsLoader _modsLoader;
+        ModsLoader modsLoader;
         const int ObjectsInterval = 2;
 
         void OnEnable()
 		{
-			_modsLoader = new ModsLoader("1.1.102r19");
+			modsLoader = new ModsLoader("1.1.102r19");
 		}
 
 		public void LoadBundle(string path)
 		{
-			_loadedMods.Add(_modsLoader.LoadBundle(path));
+			loadedMods.Add(modsLoader.LoadBundle(path));
 		}
 
 		public void SpawnObjects()
 		{
-			int x = _spawnedObjects.Count * ObjectsInterval;
-			var objects = _loadedMods.Last().GetAllObjects();
+			int x = spawnedObjects.Count * ObjectsInterval;
+			var objects = loadedMods.Last().GetAllObjects();
 			foreach (var prefab in objects)
 			{
 				var go = Instantiate(prefab, new Vector3(x, 0, 0), Quaternion.identity, transform);
-				_spawnedObjects.Add(go);
+				spawnedObjects.Add(go);
 				x += ObjectsInterval;
 			}
 		}
 
 		public void UnloadAllBundles()
 		{
-			foreach (var go in _spawnedObjects)
+			foreach (var go in spawnedObjects)
 				DestroyImmediate(go.gameObject);
-			_spawnedObjects.Clear();
-			_modsLoader.UnloadMods();
-			_loadedMods.Clear();
+			spawnedObjects.Clear();
+			modsLoader.UnloadMods();
+			loadedMods.Clear();
 		}
 
         void OnDestroy()
@@ -59,30 +59,30 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 	[CustomEditor(typeof(BundleExplorer))]
 	public class BundleExplorerGUI : Editor
 	{
-        BundleExplorer _targetObject;
+        BundleExplorer targetObject;
 
-        void OnEnable() => _targetObject = (BundleExplorer)target;
+        void OnEnable() => targetObject = (BundleExplorer)target;
 
 		public override void OnInspectorGUI()
 		{
 			base.OnInspectorGUI();
 			if (GUILayout.Button("Load bundle"))
 			{
-				var selectedPath = EditorUtility.OpenFilePanel("Select mod file", "", "");
-				_targetObject.LoadBundle(selectedPath);
-				EditorUtility.SetDirty(_targetObject);
+				string selectedPath = EditorUtility.OpenFilePanel("Select mod file", "", "");
+				targetObject.LoadBundle(selectedPath);
+				EditorUtility.SetDirty(targetObject);
 			}
 
 			if (GUILayout.Button("Spawn objects from last loaded bundle"))
 			{
-				_targetObject.SpawnObjects();
-				EditorUtility.SetDirty(_targetObject);
+				targetObject.SpawnObjects();
+				EditorUtility.SetDirty(targetObject);
 			}
 
 			if (GUILayout.Button("Unload all bundles"))
 			{
-				_targetObject.UnloadAllBundles();
-				EditorUtility.SetDirty(_targetObject);
+				targetObject.UnloadAllBundles();
+				EditorUtility.SetDirty(targetObject);
 			}
 		}
 	}

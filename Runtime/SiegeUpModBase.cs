@@ -10,8 +10,8 @@ namespace SiegeUp.ModdingPlugin
 	[CreateAssetMenu(menuName = "New SiegeUp Mod")]
 	public class SiegeUpModBase : ScriptableObject
 	{
-		public SiegeUpModMeta ModInfo = new SiegeUpModMeta();
-		public List<ObjectRecord> ObjectRecords = new List<ObjectRecord>();
+		public SiegeUpModMeta ModInfo = new();
+		public List<ObjectRecord> ObjectRecords = new();
 
 		public List<GameObject> GetAllObjects()
 		{

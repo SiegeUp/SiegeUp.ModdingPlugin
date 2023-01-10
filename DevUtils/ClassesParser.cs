@@ -28,7 +28,7 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 		public void Parse(string outputFolder, Type filterAttributeType)
 		{
 			Assembly mainAssembly = null;
-			foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
+			foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
 				if (assembly.GetName().Name == "Assembly-CSharp")
 					mainAssembly = assembly;
 			var types = mainAssembly.GetTypes().Where(x => x.IsDefined(filterAttributeType, false)).ToArray();
@@ -67,7 +67,7 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 
         static void SerializeClass(string outputFolder, ClassInfo classInfo)
 		{
-			using (StreamWriter sw = new StreamWriter(Path.Combine(outputFolder, classInfo.Type + ".cs")))
+			using (var sw = new StreamWriter(Path.Combine(outputFolder, classInfo.Type + ".cs")))
 				SerializeClassInfo(sw, classInfo);
 		}
 
@@ -110,15 +110,15 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 
         static void CopyAttributeFile(StreamWriter output, Type type)
 		{
-			var projectDir = Path.Combine(Assembly.GetExecutingAssembly().Location, "..", "..", "..");
-			var files = Directory.GetFiles(projectDir, $"{type.Name}*.cs", SearchOption.AllDirectories);
-			using (StreamReader sr = new StreamReader(files.First()))
+			string projectDir = Path.Combine(Assembly.GetExecutingAssembly().Location, "..", "..", "..");
+			string[] files = Directory.GetFiles(projectDir, $"{type.Name}*.cs", SearchOption.AllDirectories);
+			using (var sr = new StreamReader(files.First()))
 				output.Write(sr.ReadToEnd());
 		}
 
         static void SerializeEnumBody(StreamWriter output, ClassInfo classInfo, string indent)
 		{
-			foreach (var value in classInfo.Type.GetEnumNames())
+			foreach (string value in classInfo.Type.GetEnumNames())
 			{
 				output.Write(indent);
 				output.Write(value);
@@ -154,7 +154,7 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 		{
 			SerializeAttributes(output, member.CustomAttributesData, indent);
 			output.Write(indent);
-			var modifiers = SerializeModifiersAndKeyWords(member);
+			string modifiers = SerializeModifiersAndKeyWords(member);
 			if (modifiers != "")
 			{
 				output.Write(modifiers);
@@ -171,8 +171,8 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 			if (type.IsArray)
 			{
 				var subtype = type.GetElementType();
-				var data = SerializeMemberType(subtype);
-				var rankData = $"[{new string(',', type.GetArrayRank() - 1)}]";
+				string data = SerializeMemberType(subtype);
+				string rankData = $"[{new string(',', type.GetArrayRank() - 1)}]";
 				return subtype.IsArray ? data.Insert(data.IndexOf('['), rankData) : data + rankData;
 			}
 			else if (type.IsGenericType)
@@ -222,7 +222,7 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 
         static void SerializeClassUsings(StreamWriter output, IEnumerable<string> namespaces)
 		{
-			foreach (var ns in namespaces)
+			foreach (string ns in namespaces)
 				output.WriteLine($"using {ns};");
 		}
 
@@ -249,9 +249,12 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 				(isPublic, isStatic, isVirtual, isAbstract) =
 					(!type.IsNotPublic, type.IsAbstract && type.IsSealed, false, type.IsAbstract && !type.IsSealed);
 			}
-			else
-				throw new NotImplementedException("Not supported member type");
-			return string.Join(
+            else
+            {
+                throw new NotImplementedException("Not supported member type");
+            }
+
+            return string.Join(
 				" ",
 				new[] { isPublic ? "public" : "", isStatic ? "static" : "", isVirtual ? "virtual" : "", isAbstract ? "abstract" : "" }
 					.Where(x => x != ""));
@@ -269,7 +272,7 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 
         static bool IsSystemType(Type type)
 		{
-			var assembly = type.Assembly.GetName().Name;
+			string assembly = type.Assembly.GetName().Name;
 			return assembly == "mscorlib" || assembly.StartsWith("Unity") || assembly.StartsWith("System");
 		}
 
@@ -346,7 +349,7 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 
             static ClassFieldInfo[] GetTypeOwnFields(Type type, Type[] allowedCustomAttributes)
 			{
-				var baseTypeFieldNames = type.BaseType?.GetFields(CommonBindingFlags).Select(x => x.Name).ToArray() ?? Array.Empty<string>();
+				string[] baseTypeFieldNames = type.BaseType?.GetFields(CommonBindingFlags).Select(x => x.Name).ToArray() ?? Array.Empty<string>();
 				return type
 					.GetFields(CommonBindingFlags)
 					.Where(x => !baseTypeFieldNames.Contains(x.Name))

@@ -19,6 +19,6 @@ namespace SiegeUp.ModdingPlugin
 			public string AutoText;
 		}
 
-		public List<Localization> Localizations = new List<Localization>();
+		public List<Localization> Localizations = new();
 	}
 }

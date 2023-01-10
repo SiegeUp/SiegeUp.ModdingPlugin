@@ -42,7 +42,7 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 			if ((DateTime.UtcNow - _lastUpdateTime).TotalSeconds < UpdatePeriodSec)
 				return;
 			_lastUpdateTime = DateTime.UtcNow;
-			var versionInManifest = GetPluginVersionFromManifest();
+			string versionInManifest = GetPluginVersionFromManifest();
 			if (ModsLoader.Version != versionInManifest)
 				Debug.LogError($"Don't forget to update plugin version!\n" +
 					$"Manifest ver: {versionInManifest}. ModsLoader ver: {ModsLoader.Version}");
@@ -50,8 +50,8 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 
         static string GetPluginVersionFromManifest()
 		{
-			var data = File.ReadAllLines(_pluginManifestPath);
-			var versionInfo = data.FirstOrDefault(x => x.Contains("\"version\":"));
+			string[] data = File.ReadAllLines(_pluginManifestPath);
+			string versionInfo = data.FirstOrDefault(x => x.Contains("\"version\":"));
 			return GetVersionFromJsonString(versionInfo);
 		}
 

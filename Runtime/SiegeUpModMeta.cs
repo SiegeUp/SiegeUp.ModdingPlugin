@@ -16,7 +16,7 @@ namespace SiegeUp.ModdingPlugin
 		[Min(1)]
 		public int Version = 1;
 		[HideInInspector]
-		public List<SiegeUpModBundleInfo> BuildsInfo = new List<SiegeUpModBundleInfo>();
+		public List<SiegeUpModBundleInfo> BuildsInfo = new();
 		[HideInInspector]
 		public string ModSourceUrl;
 		public string Id;
