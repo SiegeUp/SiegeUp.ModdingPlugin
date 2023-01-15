@@ -1,8 +1,13 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 
 namespace SiegeUp.ModdingPlugin
 {
-	public class Utils
+    public class EnableReferenceCopy : Attribute {}
+    public class EnableReference : Attribute {}
+    public class DisableReference : Attribute {}
+
+    public class Utils
 	{
 		public static PlatformShortName GetCurrentPlatform()
 		{

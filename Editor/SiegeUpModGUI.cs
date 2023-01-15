@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace SiegeUp.ModdingPlugin.Editor
 {
-	[CustomEditor(typeof(SiegeUpModBase))]
+	[CustomEditor(typeof(SiegeUpModBase), true)]
 	public class SiegeUpModGUI : UnityEditor.Editor
 	{
         SiegeUpModBase _targetObject;
@@ -27,7 +27,7 @@ namespace SiegeUp.ModdingPlugin.Editor
 			{
 				if (GUILayout.Button(platform.Value.ToString()) && ValidateModsFolder())
 				{
-					BundleBuildingTool.BuildAssetBundle(_targetObject, platform.Key);
+					BundleBuildingTool.BuildAssetBundle(_targetObject, platform.Key).Wait();
 #if UNITY_2019_4
 					GUIUtility.ExitGUI();
 #endif

@@ -31,8 +31,7 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 		public void SpawnObjects()
 		{
 			int x = spawnedObjects.Count * ObjectsInterval;
-			var objects = loadedMods.Last().GetAllObjects();
-			foreach (var prefab in objects)
+            foreach (var prefab in loadedMods.Last().AllObjects)
 			{
 				var go = Instantiate(prefab, new Vector3(x, 0, 0), Quaternion.identity, transform);
 				spawnedObjects.Add(go);

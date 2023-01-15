@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -10,41 +11,27 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 {
 	public class ClassesParser
 	{
-		public Type[] AllowedCustomAttributes { get; private set; }
+		public Type[] AllowedCustomAttributes { get; private set; } = { typeof(SerializeField) };
 
-		public ClassesParser()
+		public ClassesParser SetAllowedCustomAttributes(params Type[] attributes)
 		{
-			AllowedCustomAttributes = new[] { typeof(SerializeField) };
+			AllowedCustomAttributes = attributes?.Append(typeof(SerializeField)).Distinct().ToArray() ?? Array.Empty<Type>();
+            return this;
 		}
 
-		public ClassesParser SetAllowedCustomAttributes(params Type[] allowedCustomAttributes)
-		{
-			AllowedCustomAttributes = allowedCustomAttributes ?? Array.Empty<Type>();
-			if (!AllowedCustomAttributes.Contains(typeof(SerializeField)))
-				AllowedCustomAttributes = AllowedCustomAttributes.Append(typeof(SerializeField)).ToArray();
-			return this;
+		public IReadOnlyCollection<ClassInfo> ParseTypesWithAttributes(Type[] attributeType)
+        {
+            var allTypes = AppDomain.CurrentDomain.GetAssemblies().SelectMany(i => i.GetTypes());
+            var types = allTypes.Where(x => attributeType.Any(y => x.IsDefined(y, false))).ToArray();
+			return ParseTypes(types);
 		}
 
-		public void Parse(string outputFolder, Type filterAttributeType)
+		public IReadOnlyCollection<ClassInfo> ParseTypes(Type[] types)
 		{
-			Assembly mainAssembly = null;
-			foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
-				if (assembly.GetName().Name == "Assembly-CSharp")
-					mainAssembly = assembly;
-			var types = mainAssembly.GetTypes().Where(x => x.IsDefined(filterAttributeType, false)).ToArray();
-			Parse(outputFolder, types);
-		}
 
-		public void Parse(string outputFolder, Type[] types)
-		{
-			if (File.Exists(outputFolder))
-				outputFolder = Path.GetDirectoryName(outputFolder);
-			Directory.CreateDirectory(outputFolder);
-			var time = DateTime.Now;
-			var classesInfo = GetClassesInfo(types);
-			Parallel.ForEach(classesInfo, (data) => SerializeClass(outputFolder, data));
-			Debug.Log($"Scripts parsing was completed in {(DateTime.Now - time).TotalMilliseconds}ms. Created {classesInfo.Count} files");
-		}
+            var classesInfo = GetClassesInfo(types);
+            return classesInfo;
+        }
 
         HashSet<ClassInfo> GetClassesInfo(Type[] types)
 		{
@@ -54,6 +41,8 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 			while (stack.Count > 0)
 			{
 				var type = stack.Pop();
+                if (type.CustomAttributes.Any(i => i.AttributeType == typeof(DisableReference)))
+                    continue;
 				if (IsSystemType(type) || !IsSimpleType(type))
 					continue;
 				var classInfo = new ClassInfo(type, AllowedCustomAttributes, types.Contains(type));
@@ -65,25 +54,19 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 			return result;
 		}
 
-        static void SerializeClass(string outputFolder, ClassInfo classInfo)
+        public static void SerializeClass(string outputFolder, ClassInfo classInfo)
 		{
-			using (var sw = new StreamWriter(Path.Combine(outputFolder, classInfo.Type + ".cs")))
-				SerializeClassInfo(sw, classInfo);
-		}
+            using (var sw = new StreamWriter(Path.Combine(outputFolder, classInfo.Type + ".cs")))
+            {
+                SerializeClassUsings(sw, classInfo.Usings);
+				sw.WriteLine();
+                SerializeClassInfo(sw, classInfo);
+            }
+        }
 
-        static void SerializeClassInfo(StreamWriter output, ClassInfo classInfo, string indent = "")
+        public static void SerializeClassInfo(StreamWriter output, ClassInfo classInfo, string indent = "")
 		{
-			if (classInfo.Type.BaseType == typeof(Attribute))
-			{
-				CopyAttributeFile(output, classInfo.Type);
-				return;
-			}
-			if (!classInfo.Type.IsNested && classInfo.Usings.Length > 0)
-			{
-				SerializeClassUsings(output, classInfo.Usings);
-				output.WriteLine();
-			}
-			SerializeAttributes(output, classInfo.CustomAttributesData, indent);
+            SerializeAttributes(output, classInfo.CustomAttributesData, indent);
 			if (classInfo.IsSerializable)
 			{
 				SerializeAttribute(output, typeof(SerializableAttribute), null, indent);
@@ -106,14 +89,6 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 			output.Write(indent);
 			output.Write("}");
 			output.WriteLine();
-		}
-
-        static void CopyAttributeFile(StreamWriter output, Type type)
-		{
-			string projectDir = Path.Combine(Assembly.GetExecutingAssembly().Location, "..", "..", "..");
-			string[] files = Directory.GetFiles(projectDir, $"{type.Name}*.cs", SearchOption.AllDirectories);
-			using (var sr = new StreamReader(files.First()))
-				output.Write(sr.ReadToEnd());
 		}
 
         static void SerializeEnumBody(StreamWriter output, ClassInfo classInfo, string indent)
@@ -146,8 +121,8 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 
         static void SerializeFields(StreamWriter output, IEnumerable<ClassInfo.ClassFieldInfo> members, string indent = "\t")
 		{
-			foreach (var member in members)
-				SerializeField(output, member, indent);
+			foreach (var member in members) 
+                SerializeField(output, member, indent);
 		}
 
         static void SerializeField(StreamWriter output, ClassInfo.ClassFieldInfo member, string indent = "\t")
@@ -166,7 +141,7 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 			output.WriteLine(";");
 		}
 
-        static string SerializeMemberType(Type type, bool usePureName = false)
+        static string SerializeMemberType(Type type, bool usePlainName = false)
 		{
 			if (type.IsArray)
 			{
@@ -181,11 +156,11 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 			}
 			else
 			{
-				if (usePureName)
+				if (usePlainName)
 					return type.Name;
 				var typeParts = new[]
 				{
-					type.Namespace?.StartsWith("Unity") ?? false ? type.Namespace : "",
+					type.Namespace ?? "",
 					type.DeclaringType?.Name ?? "",
 					type.Name
 				}.Where(x => x != "");
@@ -220,7 +195,7 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 			}
 		}
 
-        static void SerializeClassUsings(StreamWriter output, IEnumerable<string> namespaces)
+        public static void SerializeClassUsings(StreamWriter output, IEnumerable<string> namespaces)
 		{
 			foreach (string ns in namespaces)
 				output.WriteLine($"using {ns};");
@@ -276,22 +251,22 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 			return assembly == "mscorlib" || assembly.StartsWith("Unity") || assembly.StartsWith("System");
 		}
 
-        class ClassInfo
+        public class ClassInfo
 		{
-			public string[] Usings;
-			public Type Type;
-			public Type[] Dependencies;
-			public bool ShouldBePartial;
-			public bool IsSerializable;
-			public CustomAttributeData[] CustomAttributesData;
-			public ClassFieldInfo[] Fields;
-			public ClassInfo[] NestedTypes;
+            public string[] Usings { get; }
+            public Type Type { get; }
+            public Type[] Dependencies { get; }
+            public bool ShouldBePartial { get; }
+            public bool IsSerializable { get; }
+            public CustomAttributeData[] CustomAttributesData { get; }
+            public ClassFieldInfo[] Fields { get; }
+            public ClassInfo[] NestedTypes { get; }
 
             static readonly BindingFlags CommonBindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static;
 
 			public ClassInfo(Type type, Type[] allowedCustomAttributes, bool shouldBePartial)
-			{
-				ShouldBePartial = shouldBePartial;
+            {
+                ShouldBePartial = shouldBePartial;
 				Type = type;
 				Fields = GetTypeOwnFields(type, allowedCustomAttributes);
 				var fieldsDirectDeps = GetVisibleDependencies(Fields.Select(x => x.Type)).ToArray();
@@ -304,15 +279,16 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 				deps.AddRange(Fields.Select(x => x.Type));
 				deps.AddRange(CustomAttributesData.Select(x => x.AttributeType));
 				deps.AddRange(Fields.SelectMany(x => x.CustomAttributesData.Select(cad => cad.AttributeType)));
-				Dependencies = GetVisibleDependencies(deps).Select(GetMainClassType).Distinct().ToArray();
+                Dependencies = GetVisibleDependencies(deps).Select(GetMainClassType).Distinct().ToArray();
 				Usings = Dependencies.Select(x => x.Namespace).Where(x => !string.IsNullOrEmpty(x)).Distinct().ToArray();
-			}
+            }
 
             static ClassInfo[] GetRequiredNestedTypes(Type type, Type[] allowedCustomAttributes, Type[] fieldsDirectDeps)
 			{
 				return type
 					.GetNestedTypes(CommonBindingFlags)
 					.Where(x => IsRequiredNestedType(x, fieldsDirectDeps, allowedCustomAttributes))
+                    .Where(x => x.CustomAttributes.All(y => y.AttributeType != typeof(DisableReference)))
 					.Select(x => new ClassInfo(x, allowedCustomAttributes, false))
 					.ToArray();
 			}
@@ -321,7 +297,7 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 			{
 				return member
 					.GetCustomAttributesData()
-					.Where(x => x.AttributeType.Namespace?.StartsWith("Unity") ?? false || allowedCustomAttributes.Contains(x.AttributeType))
+					.Where(x => (x.AttributeType.Namespace?.StartsWith("Unity") ?? false) || allowedCustomAttributes.Contains(x.AttributeType))
 					.ToArray();
 			}
 
@@ -349,10 +325,11 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 
             static ClassFieldInfo[] GetTypeOwnFields(Type type, Type[] allowedCustomAttributes)
 			{
-				string[] baseTypeFieldNames = type.BaseType?.GetFields(CommonBindingFlags).Select(x => x.Name).ToArray() ?? Array.Empty<string>();
+                string[] baseTypeFieldNames = type.BaseType?.GetFields(CommonBindingFlags).Select(x => x.Name).ToArray() ?? Array.Empty<string>();
 				return type
 					.GetFields(CommonBindingFlags)
 					.Where(x => !baseTypeFieldNames.Contains(x.Name))
+                    .Where(x => x.CustomAttributes.All(y => y.AttributeType != typeof(DisableReference)))
 					.Select(x => new ClassFieldInfo(x, allowedCustomAttributes))
 					.Where(IsRequiredField)
 					.ToArray();

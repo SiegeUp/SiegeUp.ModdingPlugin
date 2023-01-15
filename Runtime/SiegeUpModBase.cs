@@ -1,36 +1,23 @@
 using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
-#if UNITY_EDITOR
-using UnityEditor;
-#endif
+using UnityEngine.Serialization;
 
 namespace SiegeUp.ModdingPlugin
 {
-	[CreateAssetMenu(menuName = "New SiegeUp Mod")]
-	public class SiegeUpModBase : ScriptableObject
+	public abstract class SiegeUpModBase : ScriptableObject
 	{
-		public SiegeUpModMeta ModInfo = new();
-		public List<ObjectRecord> ObjectRecords = new();
+		[SerializeField, FormerlySerializedAs("ModInfo")]
+		SiegeUpModMeta modInfo = new();
 
-		public List<GameObject> GetAllObjects()
-		{
-			return ObjectRecords.ConvertAll(i => i.Prefab);
-		}
+        public SiegeUpModMeta ModInfo => modInfo;
+        public abstract IEnumerable<GameObject> AllObjects { get; }
 
-		public bool Validate()
-		{
-			RemoveNullRecords();
-			var result = ModInfo.Validate(this);
-#if UNITY_EDITOR
-			EditorUtility.SetDirty(this);
-#endif
-			return result;
-		}
+        public abstract bool Validate();
 
-		public void UpdateBuildInfo(PlatformShortName platform)
+        public void UpdateBuildInfo(PlatformShortName platform, string gameVersion)
 		{
-			UpdateBuildInfo(platform, new SiegeUpModBundleInfo(platform, ModsLoader.Version, "1.1.102r19"));
+            UpdateBuildInfo(platform, new SiegeUpModBundleInfo(platform, ModsLoader.Version, gameVersion));
 		}
 
 		public void UpdateBuildInfo(PlatformShortName platform, SiegeUpModBundleInfo prevBuildInfo)
@@ -40,21 +27,8 @@ namespace SiegeUp.ModdingPlugin
 			else
 				ModInfo.UpdateBuildInfo(prevBuildInfo);
 #if UNITY_EDITOR
-			EditorUtility.SetDirty(this);
+			UnityEditor.EditorUtility.SetDirty(this);
 #endif
-		}
-
-        void RemoveNullRecords()
-		{
-			ObjectRecords = ObjectRecords.Where(x => x != null && x.Prefab).ToList();
-		}
-
-		[System.Serializable]
-		public class ObjectRecord
-		{
-			public GameObject Prefab;
-			public Translation Name;
-			public Texture2D Icon;
-		}
-	}
+        }
+    }
 }

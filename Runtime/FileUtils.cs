@@ -19,7 +19,7 @@ namespace SiegeUp.ModdingPlugin
 				   Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
 				   "..",
 				   "LocalLow",
-				   "Zdorovtsov",
+				   "Abuksigun",
 				   "SiegeUp!");
 		}
 

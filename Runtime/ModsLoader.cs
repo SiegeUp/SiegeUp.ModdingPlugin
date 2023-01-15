@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace SiegeUp.ModdingPlugin
@@ -21,7 +22,7 @@ namespace SiegeUp.ModdingPlugin
 		}
 
 		public List<SiegeUpModBase> LoadInstalledMods()
-		{
+        {
 			List<SiegeUpModBase> mods = new();
 
 			var platform = Utils.GetCurrentPlatform();
@@ -50,16 +51,17 @@ namespace SiegeUp.ModdingPlugin
 				Debug.LogWarning($"Failed to load AssetBundle from {path}");
 				return null;
 			}
-			var bundleAssets = loadedAssetBundle.LoadAllAssets<SiegeUpModBase>();
+			var bundleAssets = loadedAssetBundle.LoadAllAssets().Cast<SiegeUpModBase>().Where(i => i);
 
-			if (bundleAssets.Length < 1)
+            var mod = bundleAssets.FirstOrDefault();
+            if (!mod)
 			{
 				loadedAssetBundle.Unload(true);
 				Debug.LogWarning($"Failed to load AssetBundle from {path} because it has no {nameof(SiegeUpModBase)} asset");
 				return null;
 			}
 			loadedBundles.Add(loadedAssetBundle);
-			return bundleAssets[0];
+			return mod;
 		}
 
 		public void UnloadMods()
