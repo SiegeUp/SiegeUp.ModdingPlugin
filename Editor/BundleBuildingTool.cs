@@ -8,6 +8,7 @@ using UnityEditor;
 using UnityEditor.PackageManager;
 using UnityEditor.PackageManager.Requests;
 using UnityEngine;
+using UnityEngine.Networking;
 using PackageInfo = UnityEditor.PackageManager.PackageInfo;
 
 namespace SiegeUp.ModdingPlugin.Editor
@@ -61,7 +62,13 @@ namespace SiegeUp.ModdingPlugin.Editor
 			}
 			CreateModPackage(modBase, modDirectory);
 			AssetDatabase.Refresh();
-		}
+            CommandGameToReloadMods();
+        }
+
+        static void CommandGameToReloadMods()
+        {
+            UnityWebRequest.Get("http://localhost:9005/reload").SendWebRequest();
+        }
 
 		public static void CreateModPackage(SiegeUpModBase modBase, string outputFolder)
 		{
