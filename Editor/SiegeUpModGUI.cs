@@ -43,7 +43,7 @@ namespace SiegeUp.ModdingPlugin.Editor
 
 			if (GUILayout.Button("All", GUILayout.Height(25)) && ValidateModsFolder())
 			{
-				BundleBuildingTool.BuildAssetBundle(_targetObject, BundleBuildingTool.SupportedPlatforms.Keys.ToArray());
+				_ = BundleBuildingTool.BuildAssetBundle(_targetObject, BundleBuildingTool.SupportedPlatforms.Keys.ToArray());
 #if UNITY_2019_4
 				GUIUtility.ExitGUI();
 #endif
