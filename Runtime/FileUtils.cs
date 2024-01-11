@@ -91,8 +91,10 @@ namespace SiegeUp.ModdingPlugin
 
 		public static string GetBundleFileName(SiegeUpModMeta modMeta, PlatformShortName platform)
 		{
-			return $"{platform.ToString().ToLower()}_{modMeta.Id}.assetbundle";
-		}
+            var path = $"{platform.ToString().ToLower()}_{modMeta.Id}.assetbundle";
+            Debug.Log($"BundlePath: {path}");
+            return path;
+        }
 
 		public static string GetBundlePath(SiegeUpModMeta modMeta, PlatformShortName platform)
 		{

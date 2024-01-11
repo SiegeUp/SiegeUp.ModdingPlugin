@@ -44,7 +44,7 @@ namespace SiegeUp.ModdingPlugin
 			meta.ModSourceUrl = url;
 			if (meta.TryGetBuildInfo(Utils.GetCurrentPlatform(), out SiegeUpModBundleInfo buildInfo))
 			{
-				if (ModsLoader.Instance != null && !ModsLoader.Instance.CanLoad(buildInfo))
+				if (ModsLoader.Instance != null && !ModsLoader.Instance.CanLoadMod(buildInfo))
 				{
 					Debug.LogError($"Failed to load {meta.ModName}. It is not compatible with current game version.");
 					yield break;
@@ -95,7 +95,7 @@ namespace SiegeUp.ModdingPlugin
 			{
 				anyModsListed = true;
 				var hasBuild = mod.TryGetBuildInfo(Utils.GetCurrentPlatform(), out SiegeUpModBundleInfo buildInfo);
-				var isSupported = hasBuild && (ModsLoader.Instance?.CanLoad(buildInfo) ?? true);
+				var isSupported = hasBuild && (ModsLoader.Instance?.CanLoadMod(buildInfo) ?? true);
 				if (!showOnlySupported || isSupported)
 					Debug.Log($"{mod.ModName} v{mod.Version} by {mod.AuthorName}" + (isSupported ? "" : " {unsupported}"));
 #if !UNITY_EDITOR

@@ -20,10 +20,10 @@ namespace SiegeUp.ModdingPlugin.DevUtils
 
         void OnEnable()
 		{
-			modsLoader = new ModsLoader("1.1.102r19");
+			modsLoader = new ModsLoader(Application.version);
 		}
 
-		public void LoadBundle(string path)
+        public void LoadBundle(string path)
 		{
 			loadedMods.Add(modsLoader.LoadBundle(path));
 		}

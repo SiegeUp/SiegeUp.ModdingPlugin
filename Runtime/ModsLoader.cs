@@ -33,8 +33,17 @@ namespace SiegeUp.ModdingPlugin
 			}
 			foreach (var meta in FileUtils.GetInstalledModsMeta())
 			{
-				if (!meta.TryGetBuildInfo(platform, out SiegeUpModBundleInfo buildInfo) || !CanLoad(buildInfo))
-					continue;
+                if (!meta.TryGetBuildInfo(platform, out SiegeUpModBundleInfo modBuildInfo))
+                {
+                    Debug.LogError($"Failed to load mod {meta.ModName}: failed to retrieve build information");
+                    continue;
+                }
+                if (!CanLoadMod(modBuildInfo))
+                {
+                    Debug.LogError($"Failed to load {meta.ModName}: It is not compatible with current game version");
+                    continue;
+                }
+
 				var mod = LoadBundle(FileUtils.GetBundlePath(meta, platform));
 				if (mod == null)
 					continue;
@@ -51,9 +60,9 @@ namespace SiegeUp.ModdingPlugin
 				Debug.LogWarning($"Failed to load AssetBundle from {path}");
 				return null;
 			}
-			var bundleAssets = loadedAssetBundle.LoadAllAssets().Cast<SiegeUpModBase>().Where(i => i);
-
-            var mod = bundleAssets.FirstOrDefault();
+            var bundleAssets = loadedAssetBundle.LoadAllAssets();
+            var modBases = bundleAssets.Cast<SiegeUpModBase>().Where(i => i);
+            var mod = modBases.FirstOrDefault();
             if (!mod)
 			{
 				loadedAssetBundle.Unload(true);
@@ -71,10 +80,17 @@ namespace SiegeUp.ModdingPlugin
 			loadedBundles.Clear();
 		}
 
-		public bool CanLoad(SiegeUpModBundleInfo buildInfo)
+		public bool CanLoadMod(SiegeUpModBundleInfo buildInfo)
 		{
-			return CurrentPluginVersion.Supports(new VersionInfo(buildInfo.PluginVersion))
-				&& CurrentGameVersion.Supports(new VersionInfo(buildInfo.GameVersion));
+            bool supportsPluginVersion = CurrentPluginVersion.Supports(new VersionInfo(buildInfo.PluginVersion));
+            bool supportsGameVersion  = CurrentGameVersion.Supports(new VersionInfo(buildInfo.GameVersion));
+
+            if (!supportsPluginVersion)
+                Debug.LogError($"Current Modding Plugin v.{CurrentPluginVersion} doesn't support Modding Plugin v.{buildInfo.PluginVersion}");
+            if (!supportsGameVersion)
+                Debug.LogError($"Current game version {CurrentPluginVersion} doesn't support mods for v.{buildInfo.PluginVersion}");
+
+            return supportsPluginVersion && supportsGameVersion;
 		}
 	}
 }

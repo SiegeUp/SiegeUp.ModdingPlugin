@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -9,7 +8,6 @@ using UnityEditor.PackageManager;
 using UnityEditor.PackageManager.Requests;
 using UnityEngine;
 using UnityEngine.Networking;
-using PackageInfo = UnityEditor.PackageManager.PackageInfo;
 
 namespace SiegeUp.ModdingPlugin.Editor
 {
@@ -87,8 +85,19 @@ namespace SiegeUp.ModdingPlugin.Editor
         {
             var packages = await Client.List();
             var package = packages.FirstOrDefault(i => i.name == "com.siegeup.reference");
-            string gameVersion = package?.version ?? Application.version;
-			Debug.Log($"Game version: {gameVersion}");
+
+            string gameVersion;
+            if (package != null)
+            {
+                gameVersion = package?.version ?? Application.version;
+                Debug.Log($"com.siegeup.reference package found successfully. Game version: {gameVersion}");
+            }
+            else
+            {
+                Debug.LogError("Can't find com.siegeup.reference package!");
+                return;
+            }
+
 			modBase.ModInfo.TryGetBuildInfo(SupportedPlatforms[targetPlatform], out var prevBuildInfo);
 			modBase.UpdateBuildInfo(SupportedPlatforms[targetPlatform], gameVersion);
 			var manifest = BuildPipeline.BuildAssetBundles(outputDir, map, BuildAssetBundleOptions.StrictMode | BuildAssetBundleOptions.DeterministicAssetBundle, targetPlatform);
