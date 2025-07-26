@@ -65,7 +65,7 @@ namespace SiegeUp.ModdingPlugin.Editor
 
         static void CommandGameToReloadMods()
         {
-            UnityWebRequest.Get("http://localhost:9005/reload").SendWebRequest();
+            UnityWebRequest.Get("http://localhost:9105/reload").SendWebRequest();
         }
 
 		public static void CreateModPackage(SiegeUpModBase modBase, string outputFolder)
