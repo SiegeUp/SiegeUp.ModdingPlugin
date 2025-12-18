@@ -100,7 +100,7 @@ namespace SiegeUp.ModdingPlugin.Editor
 
 			modBase.ModInfo.TryGetBuildInfo(SupportedPlatforms[targetPlatform], out var prevBuildInfo);
 			modBase.UpdateBuildInfo(SupportedPlatforms[targetPlatform], gameVersion);
-			var manifest = BuildPipeline.BuildAssetBundles(outputDir, map, BuildAssetBundleOptions.StrictMode | BuildAssetBundleOptions.DeterministicAssetBundle, targetPlatform);
+			var manifest = BuildPipeline.BuildAssetBundles(outputDir, map, BuildAssetBundleOptions.StrictMode, targetPlatform);
 			if (manifest != null)
 			{
 				Debug.Log($"Mod \"{modBase.ModInfo.ModName}\" for \"{SupportedPlatforms[targetPlatform]}\" platform was builded successfully!");
